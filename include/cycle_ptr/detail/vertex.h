@@ -17,10 +17,13 @@ class vertex
   friend class generation;
   friend class base_control;
 
-  vertex() = delete;
-  vertex(const vertex&) = delete;
-
  protected:
+  vertex();
+
+  vertex([[maybe_unused]] const vertex& other)
+  : vertex()
+  {}
+
   explicit vertex(boost::intrusive_ptr<base_control> bc) noexcept;
   ~vertex() noexcept;
 

@@ -5,6 +5,10 @@
 namespace cycle_ptr::detail {
 
 
+vertex::vertex()
+: vertex(detail::base_control::publisher_lookup(this, sizeof(this)))
+{}
+
 vertex::vertex(boost::intrusive_ptr<base_control> bc) noexcept
 : bc_(std::move(bc))
 {

@@ -120,6 +120,45 @@ class cycle_member_ptr
   : cycle_member_ptr(owner, cycle_gptr<U>(ptr))
   {}
 
+  cycle_member_ptr() {}
+  cycle_member_ptr([[maybe_unused]] std::nullptr_t nil) {}
+
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(const cycle_member_ptr<U>& ptr)
+  : target_(ptr.target_)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(cycle_member_ptr<U>&& ptr)
+  : cycle_member_ptr(ptr)
+  {
+    ptr.reset();
+  }
+
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(const cycle_gptr<U>& ptr)
+  : target_(ptr.target_)
+  {
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
+  }
+
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(cycle_gptr<U>&& ptr)
+  : target_(std::exchange(ptr.target_, nullptr))
+  {
+    this->detail::vertex::reset(
+        boost::intrusive_ptr<detail::base_control>(ptr.target_ctrl_.detach(), false),
+        true, true);
+  }
+
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  explicit cycle_member_ptr(const cycle_weak_ptr<U>& ptr)
+  : cycle_member_ptr(cycle_gptr<U>(ptr))
+  {}
+
   auto operator=([[maybe_unused]] std::nullptr_t nil)
   -> cycle_member_ptr& {
     reset();
