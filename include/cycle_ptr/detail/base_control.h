@@ -53,6 +53,7 @@ class base_control
   virtual ~base_control() noexcept;
 
  public:
+  ///\brief Test if the object managed by this control is expired.
   auto expired() const
   noexcept
   -> bool {
