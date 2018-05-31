@@ -283,14 +283,14 @@ class hazard {
       return true;
     }
 
-    expected = hazard_t()(ptr, expect);
+    expected = hazard()(ptr, expect);
     return false;
   }
 
   static auto compare_exchange_strong(std::atomic<T*>& ptr, pointer& expected, pointer desired)
   noexcept
   -> bool {
-    hazard_t hz;
+    hazard hz;
 
     for (;;) {
       T* expect = expected.get();
@@ -321,7 +321,7 @@ class hazard {
   -> ptr_set& {
     // Hazard data structure; aligned to not cross a page boundary,
     // thus limiting the number of TLB entries required for this to one.
-    static alignas(sizeof(ptr_set)) ptr_set impl;
+    alignas(sizeof(ptr_set)) static ptr_set impl;
     return impl;
   }
 
@@ -339,7 +339,7 @@ class hazard {
   static auto acquire_(T* ptr)
   noexcept
   -> T* {
-    using boost::intrusive_ptr_add_ref;
+    using namespace boost;
 
     // ADL
     if (ptr != nullptr) intrusive_ptr_add_ref(ptr);
@@ -350,7 +350,7 @@ class hazard {
   static auto release_(T* ptr)
   noexcept
   -> void {
-    using boost::intrusive_ptr_release;
+    using namespace boost;
 
     // ADL
     if (ptr != nullptr) intrusive_ptr_release(ptr);

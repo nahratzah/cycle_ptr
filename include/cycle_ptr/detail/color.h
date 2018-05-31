@@ -34,7 +34,7 @@ namespace cycle_ptr::detail {
  * white and grey colours.
  */
 enum class color : std::uintptr_t {
-  red = 0 ///< May or may not be reachable.
+  red = 0, ///< May or may not be reachable.
   black = 1, ///< Unreachable.
   grey = 2, ///< Reachable, during GC: may point at zero or more red edges.
   white = 3, ///< Reachable, during GC: points at no red edges.
@@ -66,7 +66,7 @@ noexcept
 constexpr auto get_color(std::uintptr_t refcounter)
 noexcept
 -> color {
-  return color(refcount & color_mask);
+  return color(refcounter & color_mask);
 }
 
 /**
@@ -88,7 +88,7 @@ noexcept
       (get_refs(refcounter) > 0u
        ?  get_color(refcounter) == color::white || get_color(refcounter) == color::grey
        : true)
-      && (get_color(refcounter) == black
+      && (get_color(refcounter) == color::black
           ? get_refs(refcounter) == 0u
           : true);
 }
