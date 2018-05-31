@@ -316,14 +316,15 @@ class hazard {
   }
 
  private:
+  // Hazard data structure; aligned to not cross a page boundary,
+  // thus limiting the number of TLB entries required for this to one.
+  alignas(sizeof(ptr_set)) static inline ptr_set ptr_set_impl_;
+
   ///\brief Singleton set of pointers.
   static auto ptr_set_()
   noexcept
   -> ptr_set& {
-    // Hazard data structure; aligned to not cross a page boundary,
-    // thus limiting the number of TLB entries required for this to one.
-    alignas(sizeof(ptr_set)) static ptr_set impl;
-    return impl;
+    return ptr_set_impl_;
   }
 
   ///\brief Allocate a hazard store.
