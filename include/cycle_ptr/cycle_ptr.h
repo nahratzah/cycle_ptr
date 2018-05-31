@@ -257,7 +257,7 @@ class cycle_gptr {
   using element_type = std::remove_extent_t<T>;
   using weak_type = cycle_weak_ptr<T>;
 
-  constexpr cycle_gptr() noexcept = default;
+  constexpr cycle_gptr() noexcept {}
 
   constexpr cycle_gptr([[maybe_unused]] std::nullptr_t nil) noexcept
   : cycle_gptr()
@@ -486,7 +486,7 @@ class cycle_weak_ptr {
  public:
   using element_type = std::remove_extent_t<T>;
 
-  constexpr cycle_weak_ptr() noexcept = default;
+  constexpr cycle_weak_ptr() noexcept {}
 
   cycle_weak_ptr(const cycle_weak_ptr& other) noexcept
   : target_(other.target_),
