@@ -35,6 +35,7 @@ set(headers_detail
 
 add_library (cycle_ptr
     src/vertex.cc
+    src/base_control.cc
     src/generation.cc
     )
 set_property (TARGET cycle_ptr PROPERTY VERSION ${CYCLE_PTR_VERSION})

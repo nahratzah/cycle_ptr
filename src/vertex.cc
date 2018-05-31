@@ -1,5 +1,6 @@
 #include <cycle_ptr/detail/vertex.h>
 #include <cycle_ptr/detail/base_control.h>
+#include <cycle_ptr/detail/generation.h>
 
 namespace cycle_ptr::detail {
 
@@ -12,7 +13,7 @@ vertex::vertex(boost::intrusive_ptr<base_control> bc) noexcept
 }
 
 vertex::~vertex() noexcept {
-  if (bc_.expired()) {
+  if (bc_->expired()) {
     assert(dst_ == nullptr);
   } else {
     assert(this->link<vertex>::linked());
@@ -41,11 +42,11 @@ auto vertex::reset()
   const boost::intrusive_ptr<base_control> old_dst = dst_.exchange(nullptr);
   if (old_dst != nullptr) {
     if (old_dst->generation_ != src_gen) {
-      release(dst_);
+      old_dst->release();
     } else {
       // Because store_refs_ may be a zero reference counter, we can't return
       // the pointer.
-      const std::uintptr_t refs = old_dst.store_refs_.load(std::memory_order_relaxed);
+      const std::uintptr_t refs = old_dst->store_refs_.load(std::memory_order_relaxed);
       if (get_refs(refs) == 0u && get_color(refs) != color::black)
         old_dst->gc();
     }
@@ -70,7 +71,7 @@ auto vertex::reset(
   // We have to delay reference counter decrement until *after* the
   // new_dst is stored.
   // This boolean is there to remind us to do so, if we're required to.
-  bool drop_ref = false;
+  bool drop_reference = false;
 
   // Source generation.
   // (May be updated below, but must have a lifetime that exceeds either lock.)
@@ -103,13 +104,13 @@ auto vertex::reset(
     // Reordering of generations needed.
     src_merge_lck.unlock();
     src_unique_merge_lck = generation::fix_ordering(*bc_, *new_dst);
-    src_gen = bc_->generation.load(); // Update, since it may have changed.
+    src_gen = bc_->generation_.load(); // Update, since it may have changed.
     assert(src_unique_merge_lck.owns_lock());
-    assert(src_unique_merge_lck.mutex() == &src_gen.merge_mtx_);
+    assert(src_unique_merge_lck.mutex() == &src_gen->merge_mtx_);
 
     if (new_dst->generation_ != src_gen) {
       // Guaranteed by generation::fix_ordering call.
-      assert(generation::order_invariant(src_gen, new_dst->generation_.load()));
+      assert(generation::order_invariant(*src_gen, *new_dst->generation_.load()));
 
       // Acquire reference counter.
       if (!has_reference) {
@@ -137,11 +138,11 @@ auto vertex::reset(
   const boost::intrusive_ptr<base_control> old_dst = dst_.exchange(std::move(new_dst));
   if (old_dst != nullptr) {
     if (old_dst->generation_ != src_gen) {
-      release(dst_);
+      old_dst->release();
     } else {
       // Because store_refs_ may be a zero reference counter, we can't return
       // the pointer.
-      const std::uintptr_t refs = old_dst.store_refs_.load(std::memory_order_relaxed);
+      const std::uintptr_t refs = old_dst->store_refs_.load(std::memory_order_relaxed);
       if (get_refs(refs) == 0u && get_color(refs) != color::black)
         old_dst->gc();
     }
@@ -154,7 +155,7 @@ auto vertex::reset(
 auto vertex::owner_is_expired() const
 noexcept
 -> bool {
-  return bc_->is_expired();
+  return bc_->expired();
 }
 
 auto vertex::get_control() const

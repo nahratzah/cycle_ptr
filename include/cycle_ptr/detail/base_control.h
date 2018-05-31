@@ -4,6 +4,9 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
+#include <map>
+#include <mutex>
+#include <shared_mutex>
 #include <cycle_ptr/detail/color.h>
 #include <cycle_ptr/detail/hazard.h>
 #include <cycle_ptr/detail/llist.h>
@@ -16,10 +19,13 @@ class base_control
 : public link<base_control>
 {
   friend class generation;
+  friend class vertex;
 
   friend auto intrusive_ptr_add_ref(base_control* bc)
   noexcept
   -> void {
+    assert(bc != nullptr);
+
     [[maybe_unused]]
     std::uintptr_t old = bc->control_refs_.fetch_add(1u, std::memory_order_acquire);
     assert(old > 0u && old < UINTPTR_MAX);
@@ -28,7 +34,9 @@ class base_control
   friend auto intrusive_ptr_release(base_control* bc)
   noexcept
   -> void {
-    std::uintptr_t old = control_refs_.fetch_sub(1u, std::memory_order_release);
+    assert(bc != nullptr);
+
+    std::uintptr_t old = bc->control_refs_.fetch_sub(1u, std::memory_order_release);
     assert(old > 0u);
 
     if (old == 1u) std::invoke(bc->get_deleter_(), bc);
@@ -39,75 +47,19 @@ class base_control
  protected:
   class publisher;
 
-  base_control() {
-    auto g = generation::new_generation();
-    g->link(*this);
-    generation_.reset(std::move(g));
-  }
-
-  virtual ~base_control() noexcept {
-    if (under_construction) {
-      assert(store_refs_.load() == make_refcounter(1u, color::white));
-      assert(this->linked());
-      assert(controls_refs_.load() == 1u);
-
-      // Manually unlink from generation.
-      generation_.load()->unlink(*this);
-    } else {
-      assert(store_refs_.load() == make_refcounter(0u, color::black));
-      assert(!this->linked());
-      assert(controls_refs_.load() == 0u);
-    }
-
-#ifndef NDEBUG
-    std::lock_guard<std::mutex> edge_lck{ mtx_ };
-    assert(edges_.empty());
-#endif
-  }
+  base_control();
+  virtual ~base_control() noexcept;
 
  public:
   auto expired() const
   noexcept
   -> bool {
-    return get_color(store_refs_.load(std::memory_order_relaxed) != color::black);
+    return get_color(store_refs_.load(std::memory_order_relaxed)) != color::black;
   }
 
   ///\brief Used by weak to strong reference promotion.
   ///\return True if promotion succeeded, false otherwise.
-  auto weak_acquire()
-  noexcept
-  -> bool {
-    boost::intrusive_ptr<generation> gen_ptr;
-    std::shared_lock<std::shared_mutex> lck;
-
-    std::uintptr_t expect = make_refcounter(1, color::white);
-    while (get_color(expect) != color::black) {
-      [[unlikely]]
-      if (get_color(expect) == color::red && !lck.owns_lock()) {
-        // Acquire weak red-promotion lock.
-        gen_ptr = generation_.get();
-        for (;;) {
-          lck = std::shared_lock<std::shared_mutex>(gen_ptr->red_promotion_mtx_);
-          if (gen_ptr == generation_) break;
-          lck.unlock();
-          gen_ptr = generation_;
-        }
-      }
-
-      const color target_color = (get_color(expect) == color::red
-          ? color::grey
-          : get_color(expect));
-      [[likely]]
-      if (store_refs_.compare_exchange_weak(
-              expect,
-              make_refcounter(get_refs(expect) + 1u, target_color),
-              std::memory_order_relaxed,
-              std::memory_order_relaxed))
-        return true;
-    }
-
-    return false;
-  }
+  auto weak_acquire() noexcept -> bool;
 
   /**
    * \brief Acquire reference.
@@ -133,25 +85,7 @@ class base_control
    *
    * May only be called on reachable instances of this.
    */
-  auto acquire()
-  noexcept
-  -> void {
-    std::uintptr_t expect = make_refcounter(1, color::white);
-    for (;;) {
-      assert(get_color(expect) != color::black);
-
-      const color target_color = (get_color(expect) == color::red
-          ? color::grey
-          : get_color(expect));
-      [[likely]]
-      if (store_refs_.compare_exchange_weak(
-              expect,
-              make_refcounter(get_refs(expect) + 1u, target_color),
-              std::memory_order_relaxed,
-              std::memory_order_relaxed))
-        return;
-    }
-  }
+  auto acquire() noexcept -> void;
 
   /**
    * \brief Release reference counter.
@@ -177,15 +111,7 @@ class base_control
   /**
    * \brief Run GC.
    */
-  auto gc()
-  noexcept
-  -> void {
-    boost::intrusive_ptr<generation> gen_ptr;
-    do {
-      gen_ptr = generation_.get();
-      gen_ptr->gc();
-    } while (gen_ptr != generation_);
-  }
+  auto gc() noexcept -> void;
 
   auto push_back(vertex& v)
   noexcept
@@ -220,7 +146,7 @@ class base_control::publisher {
  private:
   struct address_range {
     void* addr;
-    std::size_t* len;
+    std::size_t len;
 
     auto operator==(const address_range& other) const
     noexcept
@@ -258,12 +184,12 @@ class base_control::publisher {
   ///\brief Publish a base_control for an object at the given address.
   publisher(void* addr, std::size_t len, base_control& bc) {
     const auto mtx_and_map = singleton_map_();
-    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex>(mtx_and_map) };
+    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
 
     [[maybe_unused]]
     bool success;
     std::tie(iter_, success) =
-        std::get<map_type>(mtx_and_map).emplace(address_range(addr, len), &bc);
+        std::get<map_type&>(mtx_and_map).emplace(address_range{ addr, len }, &bc);
 
     assert(success);
   }
@@ -271,9 +197,9 @@ class base_control::publisher {
   ///\brief Destructor, unpublishes the range.
   ~publisher() noexcept {
     const auto mtx_and_map = singleton_map_();
-    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex>(mtx_and_map) };
+    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
 
-    std::get<map_type>(mtx_and_map).erase(iter_);
+    std::get<map_type&>(mtx_and_map).erase(iter_);
   }
 
   ///\brief Perform a lookup, to figure out which control manages the given address range.
@@ -283,15 +209,15 @@ class base_control::publisher {
   ///\param[in] len Sizeof the object for which to find a base control.
   ///\returns Base control owning the argument address range.
   ///\throws std::runtime_error if no pushlished range covers the argument range.
-  static lookup(void* addr, std::size_t len)
+  static auto lookup(void* addr, std::size_t len)
   noexcept
   -> base_control& {
     const auto mtx_and_map = singleton_map_();
-    std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex>(mtx_and_map) };
+    std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
 
     // Find address range after argument range.
-    const map_type& map = std::get<map_type>(mtx_and_map);
-    auto pos = map.upper_bound(address_range(addr, len));
+    const map_type& map = std::get<map_type&>(mtx_and_map);
+    auto pos = map.upper_bound(address_range{ addr, len });
     assert(pos == map.end() || pos->first.addr > addr);
 
     // Skip back one position, to find highest address range containing addr.
@@ -305,8 +231,8 @@ class base_control::publisher {
 
     // Verify if range fits.
     [[likely]]
-    if (static_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
-        >= static_cast<std::uintptr_t>(addr) + len)
+    if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
+        >= reinterpret_cast<std::uintptr_t>(addr) + len)
       return *pos->second;
 
     throw std::runtime_error("cycle_ptr: no published control block for given address range.");
@@ -324,13 +250,8 @@ class base_control::publisher {
    *
    * \returns Map for range publication, with its associated mutex.
    */
-  static auto singleton_map_()
-  noexcept
-  -> std::tuple<std::shared_mutex&, map_type&> {
-    static std::shared_mutex mtx;
-    static map_type map;
-    return std::tie(mtx, map);
-  }
+  static auto singleton_map_() noexcept
+  -> std::tuple<std::shared_mutex&, map_type&>;
 
   map_type::const_iterator iter_;
 };

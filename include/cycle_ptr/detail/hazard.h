@@ -1,6 +1,7 @@
 #ifndef CYCLE_PTR_DETAIL_HAZARD_H
 #define CYCLE_PTR_DETAIL_HAZARD_H
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <functional>

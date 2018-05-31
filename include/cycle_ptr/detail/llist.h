@@ -11,49 +11,7 @@ namespace cycle_ptr::detail {
 
 struct llist_head_tag {};
 
-template<typename Tag>
-class link {
-  template<typename, typename> friend class llist;
-
- public:
-  constexpr link() noexcept = default;
-
-#ifndef NDEBUG
-  ~link() noexcept {
-    assert((pred_ == nullptr && succ_ == nullptr)
-        || (pred_ == this && succ_ == this));
-  }
-#else
-  ~link() noexcept = default;
-#endif
-
- protected:
-  constexpr link([[maybe_unused]] const link& other) noexcept
-  : link()
-  {}
-
-  constexpr auto operator=([[maybe_unused]] const link& other) noexcept
-  -> link& {
-    return *this;
-  }
-
- private:
-  link([[maybe_unused]] const llist_head_tag& lht) noexcept
-  : pred_(this),
-    succ_(this)
-  {}
-
- protected:
-  constexpr auto linked() const
-  noexcept
-  -> bool {
-    return pred_ != nullptr;
-  }
-
- private:
-  link* pred_ = nullptr;
-  link* succ_ = nullptr;
-};
+template<typename> class link;
 
 
 template<typename T, typename Tag>
@@ -266,8 +224,54 @@ class llist
 };
 
 
+template<typename Tag>
+class link {
+  template<typename, typename> friend class llist;
+
+ public:
+  constexpr link() noexcept = default;
+
+#ifndef NDEBUG
+  ~link() noexcept {
+    assert((pred_ == nullptr && succ_ == nullptr)
+        || (pred_ == this && succ_ == this));
+  }
+#else
+  ~link() noexcept = default;
+#endif
+
+ protected:
+  constexpr link([[maybe_unused]] const link& other) noexcept
+  : link()
+  {}
+
+  constexpr auto operator=([[maybe_unused]] const link& other) noexcept
+  -> link& {
+    return *this;
+  }
+
+ private:
+  link([[maybe_unused]] const llist_head_tag& lht) noexcept
+  : pred_(this),
+    succ_(this)
+  {}
+
+ protected:
+  constexpr auto linked() const
+  noexcept
+  -> bool {
+    return pred_ != nullptr;
+  }
+
+ private:
+  link* pred_ = nullptr;
+  link* succ_ = nullptr;
+};
+
+
 template<typename T, typename Tag>
 class llist<T, Tag>::iterator {
+  template<typename, typename> friend class llist;
   friend class llist::const_iterator;
 
  public:
@@ -343,12 +347,27 @@ class llist<T, Tag>::iterator {
     return !(*this == other);
   }
 
+  auto operator==(const const_iterator& other) const
+  noexcept
+  -> bool {
+    return link_ == other.link_;
+  }
+
+  auto operator!=(const const_iterator& other) const
+  noexcept
+  -> bool {
+    return !(*this == other);
+  }
+
  private:
   link<Tag>* link_ = nullptr;
 };
 
 template<typename T, typename Tag>
 class llist<T, Tag>::const_iterator {
+  template<typename, typename> friend class llist;
+  friend class llist::iterator;
+
  public:
   using value_type = T;
   using reference = const T&;
@@ -433,6 +452,18 @@ class llist<T, Tag>::const_iterator {
     return !(*this == other);
   }
 
+  auto operator==(const iterator& other) const
+  noexcept
+  -> bool {
+    return link_ == other.link_;
+  }
+
+  auto operator!=(const iterator& other) const
+  noexcept
+  -> bool {
+    return !(*this == other);
+  }
+
  private:
   const link<Tag>* link_ = nullptr;
 };
@@ -488,7 +519,7 @@ auto llist<T, Tag>::erase(const_iterator b, const_iterator e)
   succ->pred_ = pred;
 
   while (b != e) {
-    link<Tag>*const l = const_cast<link<Tag>*>(b->link_);
+    link<Tag>*const l = const_cast<link<Tag>*>(b.link_);
     assert(l != this);
     l->pred_ = l->succ_ = nullptr;
     ++b;

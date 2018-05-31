@@ -2,7 +2,7 @@
 #define CYCLE_PTR_DETAIL_GENERATION_H
 
 #include <atomic>
-#include <cassrt>
+#include <cassert>
 #include <cstdint>
 #include <utility>
 #include <cycle_ptr/detail/color.h>
@@ -15,15 +15,19 @@ class generation {
   friend auto intrusive_ptr_add_ref(generation* g)
   noexcept
   -> void {
+    assert(g != nullptr);
+
     [[maybe_unused]]
-    std::uintptr_t old = g.refs_.fetch_add(1u, std::memory_order_acquire);
+    std::uintptr_t old = g->refs_.fetch_add(1u, std::memory_order_acquire);
     assert(old < UINTPTR_MAX);
   }
 
   friend auto intrusive_ptr_release(generation* g)
   noexcept
   -> void {
-    std::uintptr_t old = refs_.fetch_sub(1u, std::memory_order_release);
+    assert(g != nullptr);
+
+    std::uintptr_t old = g->refs_.fetch_sub(1u, std::memory_order_release);
     assert(old > 0u);
 
     if (old == 1u) delete g;
@@ -32,7 +36,7 @@ class generation {
  private:
   using controls_list = llist<base_control, base_control>;
 
-  generation() noexcept = default;
+  generation() = default;
 
   generation(const generation&) = delete;
 
@@ -105,7 +109,7 @@ class generation {
    *
    * \returns A lock to hold while creating the edge.
    */
-  auto fix_ordering(base_control& src, base_control& dst)
+  static auto fix_ordering(base_control& src, base_control& dst)
   noexcept
   -> std::unique_lock<std::shared_mutex> {
     auto src_gen = src.generation_.load(),
@@ -123,7 +127,7 @@ class generation {
     [[likely]] // Since caller only calls this function if the invariant doesn't hold.
     if (!order_invariant(*src_gen, *dst_gen)) {
       [[unlikely]]
-      while (src_gen->seq == dst_gen->seq && src_gen > dst_gen) {
+      while (src_gen->seq == dst_gen->seq && src_gen.get() > dst_gen.get()) {
         src_merge_lck.unlock();
         src_gen.swap(dst_gen);
         std::swap(src_gc_requested, dst_gc_requested);
@@ -179,7 +183,7 @@ class generation {
       // All reads on weak pointers, will act as if they happened-before the GC
       // ran and thus as if they happened before the last reference to their
       // data went away.
-      std::lock_guard<std::mutex> lck{ mtx_ };
+      std::lock_guard<std::shared_mutex> lck{ mtx_ };
 
       // Clear GC request flag, signalling that GC has started.
       // (We do this after acquiring initial locks, so that multiple threads can
@@ -226,7 +230,7 @@ class generation {
           });
 
       // Move to unreachable list, so we can release all GC locks.
-      unreachable.splice(controls, reachable_end, controls_.end());
+      unreachable.splice(unreachable.end(), controls_, reachable_end, controls_.end());
     } // End of lock scope.
 
     // ----------------------------------------
@@ -234,12 +238,12 @@ class generation {
     // Clear edges in unreachable pointers.
     std::for_each(
         unreachable.begin(), unreachable.end(),
-        [](base_control& bc) {
+        [this](base_control& bc) {
           std::lock_guard<std::mutex> lck{ bc.mtx_ }; // Lock edges_
-          for (vertex& v : edges_) {
+          for (vertex& v : bc.edges_) {
             boost::intrusive_ptr<base_control> dst = v.dst_.exchange(nullptr);
             if (dst != nullptr && dst->generation_ != this)
-              remove_edge(nullptr, dst); // Reference count decrement.
+              dst->release(); // Reference count decrement.
           }
         });
 
@@ -276,9 +280,9 @@ class generation {
     // - BLACK -- unreachable.
     // - GREY -- strongly reachable, but referents need color update.
     // - RED -- not strongly reachable, but may or may not be reachable.
-    iterator wavefront_end = controls_.begin();
+    controls_list::iterator wavefront_end = controls_.begin();
 
-    iterator i = controls_.begin();
+    controls_list::iterator i = controls_.begin();
     while (i != controls_.end()) {
       std::uintptr_t expect = make_refcounter(0u, color::white);
       while (get_color(expect) != color::red) {
@@ -314,7 +318,7 @@ class generation {
   auto gc_phase2_mark_(controls_list::iterator b)
   noexcept
   -> controls_list::iterator {
-    iterator wavefront_end = b;
+    controls_list::iterator wavefront_end = b;
 
     while (b != controls_.end()) {
       const color b_color =
@@ -397,12 +401,12 @@ class generation {
         std::uintptr_t expect = make_refcounter(0, color::red);
         do {
           assert(get_color(expect) != color::black);
-        } while (get_color(expect != color::white
-                && dst->store_refs_.compare_exchange_weak(
-                    expect,
-                    make_refcounter(get_refs(expect), color::grey),
-                    std::memory_order_acq_rel,
-                    std::memory_order_acquire)));
+        } while (get_color(expect) != color::white
+            && dst->store_refs_.compare_exchange_weak(
+                expect,
+                make_refcounter(get_refs(expect), color::grey),
+                std::memory_order_acq_rel,
+                std::memory_order_acquire));
         if (get_color(expect) == color::white)
           continue; // Skip already processed element.
 
@@ -411,7 +415,7 @@ class generation {
         // position.
         // Can't be helped, since we're operating outside red-promotion exclusion.
         assert(get_color(expect) != color::black && get_color(expect) != color::white);
-        assert(wavefront_begin != controls_.iterator_to(dst));
+        assert(wavefront_begin != controls_.iterator_to(*dst));
 
         [[unlikely]]
         if (wavefront_end == controls_.iterator_to(*dst))
@@ -434,8 +438,8 @@ class generation {
    */
   auto gc_phase2_sweep_(controls_list::iterator wavefront_end)
   noexcept
-  -> controls::iterator {
-    wavefront_begin = controls_.begin();
+  -> controls_list::iterator {
+    controls_list::iterator wavefront_begin = controls_.begin();
 
     while (wavefront_begin != wavefront_end) {
       base_control& bc = *wavefront_begin;
@@ -530,7 +534,7 @@ class generation {
     // Cascade merge operation into edges.
     for (base_control& bc : src->controls_) {
       std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
-      for (const vertex& edge : edges_) {
+      for (const vertex& edge : bc.edges_) {
         // Move edge.
         // We have to restart this, as other threads may change pointers
         // from under us.
@@ -545,9 +549,11 @@ class generation {
           if (order_invariant(*dst, *edge_dst_gen)) break;
 
           // Recursion.
+          std::unique_lock<std::shared_mutex> edge_merge_lck{ edge_dst_gen->merge_mtx_ };
           dst_tpl = merge_(
               std::make_tuple(edge_dst_gen.get(), false),
-              std::move(dst_tpl));
+              std::move(dst_tpl),
+              edge_merge_lck);
         }
       }
     }
@@ -590,7 +596,7 @@ class generation {
   static auto merge0_(
       std::tuple<generation*, bool> x,
       std::tuple<generation*, bool> y,
-      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_mtx_lck)
+      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_mtx_lck,
       [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_merge_mtx_lck)
   noexcept
   -> bool {
@@ -635,9 +641,9 @@ class generation {
     // Update everything in src, to be moveable to dst.
     std::lock_guard<std::shared_mutex> src_lck{ src->mtx_ };
     // Stage 1: Update edge reference counters.
-    for (const base_control& bc : src->controls_) {
+    for (base_control& bc : src->controls_) {
       std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
-      for (const vertex& edge : edges_) {
+      for (const vertex& edge : bc.edges_) {
         const auto edge_dst = edge.dst_.get();
         assert(edge_dst == nullptr
             || edge_dst->generation_ == src
@@ -653,7 +659,7 @@ class generation {
     // Note that we can't combine stage 1 and stage 2,
     // as that could cause incorrect detection of cases where
     // release is to be invoked, leading to too many releases.
-    for (const base_control& bc : src->controls_) {
+    for (base_control& bc : src->controls_) {
       assert(bc.generation_ == src);
       bc.generation_ = boost::intrusive_ptr<generation>(dst);
     }
