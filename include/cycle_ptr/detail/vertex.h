@@ -96,6 +96,11 @@ class vertex
       return;
     }
 
+    // We have to delay reference counter decrement until *after* the
+    // new_dst is stored.
+    // This boolean is there to remind us to do so, if we're required to.
+    bool drop_ref = false;
+
     // Source generation.
     // (May be updated below, but must have a lifetime that exceeds either lock.)
     boost::intrusive_ptr<generation> src_gen = bc_->generation_.load();
@@ -115,7 +120,7 @@ class vertex
     if (new_dst == nullptr) {
       /* SKIP */
     } else if (new_dst->generation_ == src_gen) {
-      if (has_reference) new_dst->release(false);
+      drop_reference = has_reference;
     } else if (generation::order_invariant(*src_gen, *new_dst->generation_.load())) {
       if (!has_reference) {
         if (no_red_promotion)
@@ -144,7 +149,7 @@ class vertex
         }
       } else {
         // Ensure no reference counter.
-        if (has_reference) new_dst->release(false);
+        drop_reference = has_reference;
       }
     }
 
@@ -170,6 +175,9 @@ class vertex
           old_dst->gc();
       }
     }
+
+    // Finally, decrement the reference counter.
+    if (drop_reference) new_dst->release(false);
   }
 
   ///\brief Test if origin is expired.
