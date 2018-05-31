@@ -117,7 +117,7 @@ base_control::publisher::~publisher() noexcept {
 
 auto base_control::publisher::lookup(void* addr, std::size_t len)
 noexcept
--> base_control& {
+-> base_control* {
   const auto mtx_and_map = singleton_map_();
   std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
 
@@ -139,7 +139,7 @@ noexcept
   [[likely]]
   if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
       >= reinterpret_cast<std::uintptr_t>(addr) + len)
-    return *pos->second;
+    return pos->second;
 
   throw std::runtime_error("cycle_ptr: no published control block for given address range.");
 }
