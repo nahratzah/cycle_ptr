@@ -4,9 +4,11 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
+#include <tuple>
 #include <cycle_ptr/detail/color.h>
 #include <cycle_ptr/detail/hazard.h>
 #include <cycle_ptr/detail/llist.h>
