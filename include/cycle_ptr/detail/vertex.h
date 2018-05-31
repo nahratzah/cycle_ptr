@@ -9,10 +9,14 @@ namespace cycle_ptr::detail {
 
 
 class base_control;
+class generation;
 
 class vertex
 : public link<vertex>
 {
+  friend class generation;
+  friend class base_control;
+
   vertex() = delete;
   vertex(const vertex&) = delete;
 
@@ -25,14 +29,21 @@ class vertex
   }
 
   ~vertex() noexcept {
-    assert(this->link<vertex>::linked());
-    reset();
-    bc_->erase(*this);
+    if (bc_.expired()) {
+      assert(dst_ == nullptr);
+    } else {
+      assert(this->link<vertex>::linked());
+      reset();
+      bc_->erase(*this);
+    }
   }
 
   auto reset()
-  noexcept
   -> void {
+    throw_if_owner_expired();
+
+    if (dst_ == nullptr) return;
+
     boost::intrusive_ptr<generation> src_gen = bc_->generation_.load();
 
     // Lock src generation against merges.
@@ -74,8 +85,9 @@ class vertex
       boost::intrusive_ptr<base_control> new_dst,
       bool has_reference,
       bool no_red_promotion)
-  noexcept
   -> void {
+    throw_if_owner_expired();
+
     assert(!has_reference || no_red_promotion);
 
     // Need to special case this, because below we release ````dst_``.
@@ -158,6 +170,22 @@ class vertex
           old_dst->gc();
       }
     }
+  }
+
+  ///\brief Test if origin is expired.
+  auto owner_is_expired() const
+  noexcept
+  -> bool {
+    return bc_->is_expired();
+  }
+
+  ///\brief Throw exception if owner is expired.
+  ///\details
+  ///It is not allowed to read member pointers from an expired object.
+  ///\todo Create dedicated exception for this case.
+  auto throw_if_owner_expired() const
+  -> void {
+    if (owner_is_expired()) throw std::bad_weak_ptr();
   }
 
  public:
