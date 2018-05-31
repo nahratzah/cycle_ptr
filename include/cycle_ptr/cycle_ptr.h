@@ -15,8 +15,8 @@ class cycle_base {
   template<typename> friend class cycle_member_ptr;
 
  protected:
-  cycle_base() noexcept
-  : control_(detail::base_control::get_published_control_for_(this))
+  cycle_base()
+  : control_(detail::base_control::publisher::lookup(this, sizeof(this)))
   {}
 
   cycle_base(const cycle_base&)
@@ -36,6 +36,13 @@ class cycle_base {
   auto shared_from_this(T* this_ptr)
   -> cycle_gptr<T> {
     assert(control_ != nullptr);
+
+    // Protect against leaking out this from inside constructors.
+    // This mimics std::shared_ptr, where shared_from_this() is not
+    // valid until after the construction completes.
+    [[unlikely]]
+    if (control_->under_construction)
+      throw std::bad_weak_ptr();
 
     cycle_gptr<T> result;
     if (!control_->weak_acquire()) throw std::bad_weak_ptr();
