@@ -761,6 +761,44 @@ noexcept
 }
 
 
+template<typename T, typename Alloc, typename... Args>
+auto allocate_cycle(Alloc&& alloc, Args&&... args)
+-> cycle_gptr<T> {
+  using control_t = detail::control<T, Alloc>;
+  using alloc_traits = typename control_t::control_alloc_traits_t;
+  using alloc_t = typename control_t::control_alloc_t;
+
+  alloc_t ctrl_alloc = alloc;
+
+  T* elem_ptr;
+  control_t* ctrl_ptr = alloc_traits::allocate(ctrl_alloc, 1);
+  try {
+    alloc_traits::construct(ctrl_alloc, ctrl_ptr, std::forward<Alloc>(alloc));
+    try {
+      elem_ptr = ctrl_ptr->instantiate_(std::forward<Args>(args)...);
+    } catch (...) {
+      alloc_traits::destroy(ctrl_alloc, ctrl_ptr);
+      throw;
+    }
+  } catch (...) {
+    alloc_traits::deallocate(ctrl_alloc, ctrl_ptr, 1);
+    throw;
+  }
+
+  cycle_gptr result;
+  result.emplace(
+      elem_ptr,
+      boost::intrusive_ptr<control_t>(ctrl_ptr, false));
+  return result;
+}
+
+template<typename T, typename... Args>
+auto make_cycle(Args&&... args)
+-> cycle_gptr<T> {
+  return allocate_cycle<T>(std::allocator<T>(), std::forward<Args>(args)...);
+}
+
+
 } /* namespace cycle_ptr */
 
 namespace std {

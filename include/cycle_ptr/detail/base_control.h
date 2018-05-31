@@ -39,13 +39,31 @@ class base_control
  protected:
   class publisher;
 
-  base_control() noexcept {
+  base_control() {
     auto g = generation::new_generation();
     g->link(*this);
     generation_.reset(std::move(g));
   }
 
-  virtual ~base_control() noexcept {}
+  virtual ~base_control() noexcept {
+    if (under_construction) {
+      assert(store_refs_.load() == make_refcounter(1u, color::white));
+      assert(this->linked());
+      assert(controls_refs_.load() == 1u);
+
+      // Manually unlink from generation.
+      generation_.load()->unlink(*this);
+    } else {
+      assert(store_refs_.load() == make_refcounter(0u, color::black));
+      assert(!this->linked());
+      assert(controls_refs_.load() == 0u);
+    }
+
+#ifndef NDEBUG
+    std::lock_guard<std::mutex> edge_lck{ mtx_ };
+    assert(edges_.empty());
+#endif
+  }
 
  public:
   auto expired() const
@@ -187,7 +205,7 @@ class base_control
   virtual auto clear_data_() noexcept -> void = 0;
   virtual auto get_deleter_() const noexcept -> void (*)(base_control*) noexcept = 0;
 
-  std::atomic<std::uintptr_t> store_refs_{ (std::uintptr_t(1) << color_shift) | static_cast<std::uintptr_t>(color::white) };
+  std::atomic<std::uintptr_t> store_refs_{ make_refcounter(1u, color::white) };
   std::atomic<std::uintptr_t> control_refs_{ std::uintptr_t(1) };
   hazard_ptr<generation> generation_;
   std::mutex mtx_; // Protects edges_.

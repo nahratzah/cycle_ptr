@@ -32,23 +32,24 @@ class control final
   {}
 
   template<typename... Args>
-  auto instantiate_(Args&&... args)
-  -> void {
-    try {
-      publisher pub{ reinterpret_cast<void*>(&store_), sizeof(store_), *this };
-      new (reinterpret_cast<void*>(&store_)) T(std::forward<Args>(args)...);
-    } catch (...) {
-      throw;
-    }
+  auto instantiate(Args&&... args)
+  -> T* {
+    assert(this->under_construction);
 
-    // Clear construction flag after construction completes.
+    publisher pub{ reinterpret_cast<void*>(&store_), sizeof(store_), *this };
+    new (reinterpret_cast<void*>(&store_)) T(std::forward<Args>(args)...); // May throw.
+
+    // Clear construction flag after construction completes successfully.
     this->under_construction = false;
+
+    return reinterpret_cast<T*>(&store_);
   }
 
  private:
   auto clear_data_()
   noexcept
   -> void override {
+    assert(!this->under_construction);
     reinterpret_cast<T*>(&store_)->~T();
   }
 

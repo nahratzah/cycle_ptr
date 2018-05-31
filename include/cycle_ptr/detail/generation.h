@@ -59,7 +59,14 @@ class generation {
 
   auto link(base_control& bc) noexcept
   -> void {
+    std::lock_guard<std::shared_mutex> lck{ mtx_ };
     controls_.push_back(bc);
+  }
+
+  auto unlink(base_control& bc) noexcept
+  -> void {
+    std::lock_guard<std::shared_mutex> lck{ mtx_ };
+    controls_.erase(controls_.iterator_to(bc));
   }
 
  private:
