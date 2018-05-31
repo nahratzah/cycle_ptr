@@ -51,11 +51,10 @@ class generation {
     return boost::intrusive_ptr<generation>(new generation());
   }
 
-  static auto order_invariant(const generation* origin, const generation* dest)
+  static auto order_invariant(const generation& origin, const generation& dest)
   noexcept
   -> bool {
-    assert(dest != nullptr);
-    return origin == nullptr || origin->seq < dest->seq;
+    return origin.seq < dest.seq;
   }
 
   auto link(base_control& bc) noexcept
@@ -87,6 +86,58 @@ class generation {
   -> void {
     if (!gc_flag_.test_and_set(std::memory_order_release))
       gc_();
+  }
+
+  /**
+   * \brief Ensure src and dst meet constraint, in order to
+   * create an edge between them.
+   * \details
+   * Ensures that either:
+   * 1. order_invariant holds between generation in src and dst; or
+   * 2. src and dst are in the same generation.
+   *
+   * \returns A lock to hold while creating the edge.
+   */
+  auto fix_ordering(base_control& src, base_control& dst)
+  noexcept
+  -> std::unique_lock<std::shared_mutex> {
+    auto src_gen = src.generation_.load(),
+         dst_gen = dst.generation_.load();
+    bool src_gc_requested = false,
+         dst_gc_requested = false;
+
+    std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
+    while (src_gen != src.generation_.load()) {
+      src_merge_lck.unlock();
+      src_gen = src.generation_.load();
+      src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+    }
+
+    [[likely]] // Since caller only calls this function if the invariant doesn't hold.
+    if (!order_invariant(*src_gen, *dst_gen)) {
+      [[unlikely]]
+      while (src_gen->seq == dst_gen->seq && src_gen > dst_gen) {
+        src_merge_lck.unlock();
+        src_gen.swap(dst_gen);
+        std::swap(src_gc_requested, dst_gc_requested);
+        src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+
+        while (src_gen != src.generation_.load()) {
+          src_merge_lck.unlock();
+          src_gen = src.generation_.load();
+          src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+        }
+      }
+
+      std::tie(dst_gen, dst_gc_requested) = merge_(
+          std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
+          std::make_tuple(dst_gen, std::exchange(dst_gc_requested, false)),
+          src_merge_lck);
+    }
+
+    assert(!src_gc_requested);
+    if (dst_gc_requested) dst_gen->gc_();
+    return src_merge_lck;
   }
 
  private:
@@ -432,9 +483,209 @@ class generation {
     return wavefront_end;
   }
 
+  /**
+   * \brief Merge two generations.
+   * \details
+   * Pointers in \p src and \p dst must be distinct,
+   * and \p dst must not precede \p src.
+   *
+   * Also, if \p src and \p dst have the same sequence,
+   * address of \p src must be before address of \p dst.
+   * \param x,y Generations to merge.
+   * \param src_merge_lck Lock on ``merge_mtx_`` in \p src.
+   * Used for validation only.
+   * \returns Pointer to the merged generation.
+   */
+  static auto merge_(
+      std::tuple<boost::intrusive_ptr<generation>, bool> src_tpl,
+      std::tuple<boost::intrusive_ptr<generation>, bool> dst_tpl,
+      const std::unique_lock<std::shared_mutex>& src_merge_lck)
+  noexcept
+  -> std::tuple<boost::intrusive_ptr<generation>, bool> {
+    // Convenience aliases, must be references because of
+    // recursive invocation of this function.
+    boost::intrusive_ptr<generation>& src = std::get<0>(src_tpl);
+    boost::intrusive_ptr<generation>& dst = std::get<0>(dst_tpl);
+
+    // Arguments assertion.
+    assert(src != dst && src != nullptr && dst != nullptr);
+    assert(order_invariant(*src, *dst)
+        || (src->seq == dst->seq && src < dst));
+
+    // Convenience of GC promise booleans.
+    bool src_gc_requested = std::get<1>(src_tpl);
+
+    // Lock out GC, controls_ modifications, and merges in src.
+    // (We use unique_lock instead of lock_guard, to validate
+    // correctness at call to merge0_.)
+    const std::unique_lock<std::shared_mutex> src_lck{ src->mtx_ };
+
+    // Cascade merge operation into edges.
+    for (base_control& bc : src->controls_) {
+      std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
+      for (const vertex& edge : edges_) {
+        // Move edge.
+        // We have to restart this, as other threads may change pointers
+        // from under us.
+        for (auto edge_dst = edge.dst_.load();
+            (edge_dst != nullptr
+             && edge_dst->generation_ != src
+             && edge_dst->generation_ != dst);
+            edge_dst = edge.dst_.load()) {
+          // Generation check: we only merge if invariant would
+          // break after move of ``bc`` into ``dst``.
+          const auto edge_dst_gen = edge_dst->generation_.load();
+          if (order_invariant(*dst, *edge_dst_gen)) break;
+
+          // Recursion.
+          dst_tpl = merge_(
+              std::make_tuple(edge_dst_gen.get(), false),
+              std::move(dst_tpl));
+        }
+      }
+    }
+
+    // All edges have been moved into or past dst,
+    // unless they're in src.
+    // Now, we can place src into dst.
+    //
+    // We update dst_gc_requested.
+    std::get<1>(dst_tpl) = merge0_(
+        std::make_tuple(src.get(), src_gc_requested),
+        std::make_tuple(dst.get(), std::get<1>(dst_tpl)),
+        src_lck,
+        src_merge_lck);
+    return dst_tpl;
+  }
+
+  /**
+   * \brief Low level merge operation.
+   * \details
+   * Moves all elements from \p x into \p y, leaving \p x empty.
+   *
+   * May only be called when no other generations are sequenced between \p x and \p y.
+   *
+   * The GC promise (second tuple element) of a generation is fulfilled on
+   * the generation that is drained of elements, by propagating it
+   * the result.
+   *
+   * \p x must precede \p y.
+   *
+   * \p x must be locked for controls_, GC (via controls_) and merge_.
+   * \param x,y The two generations to merge together, together with
+   * predicate indicating if GC is promised by this thread.
+   * Note that the caller must have (shared) ownership of both generations.
+   * \param x_mtx_lock Lock on \p x, used for validation only.
+   * \param x_mtx_lock Lock on merges from \p x, used for validation only.
+   * \returns True if \p y needs to be GC'd by caller.
+   */
+  [[nodiscard]]
+  static auto merge0_(
+      std::tuple<generation*, bool> x,
+      std::tuple<generation*, bool> y,
+      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_mtx_lck)
+      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_merge_mtx_lck)
+  noexcept
+  -> bool {
+    // Convenience of accessing arguments.
+    generation* src;
+    generation* dst;
+    bool src_gc_requested, dst_gc_requested;
+    std::tie(src, src_gc_requested, dst, dst_gc_requested) = std::tuple_cat(x, y);
+    // Validate ordering.
+    assert(src != dst && src != nullptr && dst != nullptr);
+    assert(order_invariant(*src, *dst)
+        || (src->seq == dst->seq && src < dst));
+    assert(x_mtx_lck.owns_lock() && x_mtx_lck.mutex() == &src->mtx_);
+    assert(x_merge_mtx_lck.owns_lock() && x_merge_mtx_lck.mutex() == &src->merge_mtx_);
+
+    // We promise a GC, because:
+    // 1. it's trivial in src
+    // 2. the algorithm requires that dst is GC'd at some point
+    //    after the merge.
+    // Note that, due to ``x_mtx_lck``, no GC can take place on \p src
+    // until we're done.
+    if (!src_gc_requested) {
+      src_gc_requested = !src->gc_flag_.test_and_set();
+    } else {
+      assert(src->gc_flag_.test_and_set());
+    }
+
+    // Propagate responsibility for GC.
+    // If another thread has commited to running GC,
+    // we'll use that thread's promise,
+    // instead of running one ourselves later.
+    //
+    // This invocation here is an optimization, to prevent
+    // other threads from acquiring the responsibility.
+    // (Something that'll reduce lock contention probability
+    // on ``dst->mtx_``.)
+    if (!dst_gc_requested)
+      dst_gc_requested = !dst->gc_flag_.test_and_set();
+    else
+      assert(dst->gc_flag_.test_and_set());
+
+    // Update everything in src, to be moveable to dst.
+    std::lock_guard<std::shared_mutex> src_lck{ src->mtx_ };
+    // Stage 1: Update edge reference counters.
+    for (const base_control& bc : src->controls_) {
+      std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
+      for (const vertex& edge : edges_) {
+        const auto edge_dst = edge.dst_.get();
+        assert(edge_dst == nullptr
+            || edge_dst->generation_ == src
+            || edge_dst->generation_.load()->seq == dst->seq
+            || order_invariant(*dst, *edge_dst->generation_.load()));
+
+        // Update reference counters.
+        // (This predicate is why stage 2 must happen after stage 1.)
+        if (edge_dst->generation_ == dst) edge_dst->release(false);
+      }
+    }
+    // Stage 2: switch generation pointers.
+    // Note that we can't combine stage 1 and stage 2,
+    // as that could cause incorrect detection of cases where
+    // release is to be invoked, leading to too many releases.
+    for (const base_control& bc : src->controls_) {
+      assert(bc.generation_ == src);
+      bc.generation_ = boost::intrusive_ptr<generation>(dst);
+    }
+
+    // Splice onto dst.
+    std::lock_guard<std::shared_mutex> dst_lck{ dst->mtx_ };
+    dst->controls_.splice(dst->controls_.end(), src->controls_);
+
+    // Fulfill our promise of src GC.
+    if (src_gc_requested) {
+      // Since src is now empty, GC on it is trivial.
+      // So instead of running it, simply clear the flag
+      // (but only if we took responsibility for running it).
+      src->gc_flag_.clear();
+    }
+
+    // Propagate responsibility for GC.
+    // If another thread has commited to running GC,
+    // we'll use that thread's promise,
+    // instead of running one ourselves later.
+    //
+    // This invocation is repeated here,
+    // because if ``!dst_gc_requested``,
+    // the thread that promised the GC may have completed.
+    // And this could cause missed GC of src elements.
+    if (!dst_gc_requested)
+      dst_gc_requested = !dst->gc_flag_.test_and_set();
+    else
+      assert(dst->gc_flag_.test_and_set());
+
+    return dst_gc_requested;
+  }
+
  public:
   ///\brief Mutex protecting controls_ and GC.
   std::shared_mutex mtx_;
+  ///\brief Mutex protecting merges.
+  ///\note ``merge_mtx_`` must be acquired before ``mtx_``.
+  std::shared_mutex merge_mtx_;
 
  private:
   ///\brief All controls that are part of this generation.
