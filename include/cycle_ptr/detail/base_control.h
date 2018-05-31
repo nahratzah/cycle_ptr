@@ -182,25 +182,9 @@ class base_control::publisher {
 
  public:
   ///\brief Publish a base_control for an object at the given address.
-  publisher(void* addr, std::size_t len, base_control& bc) {
-    const auto mtx_and_map = singleton_map_();
-    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
-
-    [[maybe_unused]]
-    bool success;
-    std::tie(iter_, success) =
-        std::get<map_type&>(mtx_and_map).emplace(address_range{ addr, len }, &bc);
-
-    assert(success);
-  }
-
+  publisher(void* addr, std::size_t len, base_control& bc);
   ///\brief Destructor, unpublishes the range.
-  ~publisher() noexcept {
-    const auto mtx_and_map = singleton_map_();
-    std::lock_guard<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
-
-    std::get<map_type&>(mtx_and_map).erase(iter_);
-  }
+  ~publisher() noexcept;
 
   ///\brief Perform a lookup, to figure out which control manages the given address range.
   ///\details Finds the base_control for which a publisher is active.
@@ -209,34 +193,7 @@ class base_control::publisher {
   ///\param[in] len Sizeof the object for which to find a base control.
   ///\returns Base control owning the argument address range.
   ///\throws std::runtime_error if no pushlished range covers the argument range.
-  static auto lookup(void* addr, std::size_t len)
-  noexcept
-  -> base_control& {
-    const auto mtx_and_map = singleton_map_();
-    std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
-
-    // Find address range after argument range.
-    const map_type& map = std::get<map_type&>(mtx_and_map);
-    auto pos = map.upper_bound(address_range{ addr, len });
-    assert(pos == map.end() || pos->first.addr > addr);
-
-    // Skip back one position, to find highest address range containing addr.
-    [[unlikely]]
-    if (pos == map.begin())
-      throw std::runtime_error("cycle_ptr: no published control block for given address range.");
-    else
-      --pos;
-    assert(pos != map.end() && pos->first.addr <= addr);
-    assert(pos->second != nullptr);
-
-    // Verify if range fits.
-    [[likely]]
-    if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
-        >= reinterpret_cast<std::uintptr_t>(addr) + len)
-      return *pos->second;
-
-    throw std::runtime_error("cycle_ptr: no published control block for given address range.");
-  }
+  static auto lookup(void* addr, std::size_t len) noexcept -> base_control&;
 
  private:
   /**
