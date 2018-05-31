@@ -194,7 +194,7 @@ class cycle_member_ptr
   auto swap(cycle_gptr<T>& other)
   -> void {
     std::tie(*this, other) = std::forward_as_tuple(
-        std::move(other),
+        cycle_gptr<T>(std::move(other)),
         cycle_gptr<T>(std::move(*this)));
   }
 
