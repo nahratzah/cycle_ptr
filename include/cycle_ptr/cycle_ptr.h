@@ -290,7 +290,7 @@ class cycle_gptr {
   {}
 
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  explicit cycle_gptr(const cycle_member_ptr<U>& other)
+  cycle_gptr(const cycle_member_ptr<U>& other)
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {
@@ -299,7 +299,7 @@ class cycle_gptr {
   }
 
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  explicit cycle_gptr(cycle_member_ptr<U>&& other)
+  cycle_gptr(cycle_member_ptr<U>&& other)
   : cycle_gptr(other)
   {
     other.reset();
@@ -629,6 +629,132 @@ class cycle_weak_ptr {
   boost::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
 };
 
+
+template<typename T, typename U>
+inline auto operator==(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return x.get() == y.get();
+}
+
+template<typename T>
+inline auto operator==(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return !x;
+}
+
+template<typename U>
+inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !y;
+}
+
+template<typename T, typename U>
+inline auto operator!=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(x == y);
+}
+
+template<typename T>
+inline auto operator!=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return bool(x);
+}
+
+template<typename U>
+inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return bool(y);
+}
+
+template<typename T, typename U>
+inline auto operator<(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return x.get() < y.get();
+}
+
+template<typename T>
+inline auto operator<(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return std::less<typename cycle_member_ptr<T>::element_type*>()(x.get(), nullptr);
+}
+
+template<typename U>
+inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return std::less<typename cycle_member_ptr<U>::element_type*>()(nullptr, y.get());
+}
+
+template<typename T, typename U>
+inline auto operator>(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return y < x;
+}
+
+template<typename T>
+inline auto operator>(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return nullptr < x;
+}
+
+template<typename U>
+inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return y < nullptr;
+}
+
+template<typename T, typename U>
+inline auto operator<=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(y < x);
+}
+
+template<typename T>
+inline auto operator<=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return !(nullptr < x);
+}
+
+template<typename U>
+inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(y < nullptr);
+}
+
+template<typename T, typename U>
+inline auto operator>=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(x < y);
+}
+
+template<typename T>
+inline auto operator>=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+noexcept
+-> bool {
+  return !(x < nullptr);
+}
+
+template<typename U>
+inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(nullptr < y);
+}
 
 template<typename T>
 inline auto swap(cycle_member_ptr<T>& x, cycle_member_ptr<T>& y)
