@@ -96,20 +96,19 @@ class hazard {
       // Publish intent to acquire 'target'.
       for (;;) {
         T* expect = nullptr;
-        [[likely]] // Only fails during hazard contention.
         if (d_.ptr.compare_exchange_strong(
                 expect,
                 target,
                 std::memory_order_acquire,
-                std::memory_order_relaxed))
+                std::memory_order_relaxed)) [[likely]] {
           break;
+        }
       }
 
       // Check that ptr (still or again) holds 'target'.
       {
         T*const tmp = ptr.load(std::memory_order_acquire);
-        [[unlikely]] // Only happens for concurrent writes.
-        if (tmp != target) {
+        if (tmp != target) [[unlikely]] {
           // Clear published value.
           T* expect = target;
           if (!d_.ptr.compare_exchange_strong(
@@ -122,9 +121,9 @@ class hazard {
             // pointer that was originally assigned to ptr, or a newly
             // allocated value at the same address, we
             // have no option but to discard it.
-            [[unlikely]] // Unless 'ptr' has been updated to the granted value.
-            if (ptr.load(std::memory_order_relaxed) == target)
+            if (ptr.load(std::memory_order_relaxed) == target) [[unlikely]] {
               return pointer(target, false);
+            }
 
             // Another thread granted us a reference.
             release_(target);
@@ -312,7 +311,7 @@ class hazard {
       }
     }
 
-    [[unreachable]];
+    /* unreachable */
   }
 
  private:

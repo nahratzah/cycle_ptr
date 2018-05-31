@@ -38,8 +38,7 @@ noexcept
 
   std::uintptr_t expect = make_refcounter(1, color::white);
   while (get_color(expect) != color::black) {
-    [[unlikely]]
-    if (get_color(expect) == color::red && !lck.owns_lock()) {
+    if (get_color(expect) == color::red && !lck.owns_lock()) [[unlikely]] {
       // Acquire weak red-promotion lock.
       gen_ptr = generation_.get();
       for (;;) {
@@ -53,13 +52,13 @@ noexcept
     const color target_color = (get_color(expect) == color::red
         ? color::grey
         : get_color(expect));
-    [[likely]]
     if (store_refs_.compare_exchange_weak(
             expect,
             make_refcounter(get_refs(expect) + 1u, target_color),
             std::memory_order_relaxed,
-            std::memory_order_relaxed))
+            std::memory_order_relaxed)) [[likely]] {
       return true;
+    }
   }
 
   return false;
@@ -75,13 +74,13 @@ noexcept
     const color target_color = (get_color(expect) == color::red
         ? color::grey
         : get_color(expect));
-    [[likely]]
     if (store_refs_.compare_exchange_weak(
             expect,
             make_refcounter(get_refs(expect) + 1u, target_color),
             std::memory_order_relaxed,
-            std::memory_order_relaxed))
+            std::memory_order_relaxed)) [[likely]] {
       return;
+    }
   }
 }
 
@@ -127,19 +126,19 @@ noexcept
   assert(pos == map.end() || pos->first.addr > addr);
 
   // Skip back one position, to find highest address range containing addr.
-  [[unlikely]]
-  if (pos == map.begin())
+  if (pos == map.begin()) [[unlikely]] {
     throw std::runtime_error("cycle_ptr: no published control block for given address range.");
-  else
+  } else {
     --pos;
+  }
   assert(pos != map.end() && pos->first.addr <= addr);
   assert(pos->second != nullptr);
 
   // Verify if range fits.
-  [[likely]]
   if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
-      >= reinterpret_cast<std::uintptr_t>(addr) + len)
+      >= reinterpret_cast<std::uintptr_t>(addr) + len) [[likely]] {
     return pos->second;
+  }
 
   throw std::runtime_error("cycle_ptr: no published control block for given address range.");
 }

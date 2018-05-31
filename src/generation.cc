@@ -25,10 +25,8 @@ noexcept
     src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
   }
 
-  [[likely]] // Since caller only calls this function if the invariant doesn't hold.
-  if (!order_invariant(*src_gen, *dst_gen)) {
-    [[unlikely]]
-    while (src_gen->seq == dst_gen->seq && src_gen.get() > dst_gen.get()) {
+  if (!order_invariant(*src_gen, *dst_gen)) [[likely]] {
+    while (src_gen->seq == dst_gen->seq && src_gen.get() > dst_gen.get()) [[unlikely]] {
       src_merge_lck.unlock();
       src_gen.swap(dst_gen);
       std::swap(src_gc_requested, dst_gc_requested);
@@ -276,11 +274,11 @@ noexcept
       assert(get_color(expect) != color::black && get_color(expect) != color::white);
       assert(wavefront_begin != controls_.iterator_to(*dst));
 
-      [[unlikely]]
-      if (wavefront_end == controls_.iterator_to(*dst))
+      if (wavefront_end == controls_.iterator_to(*dst)) [[unlikely]] {
         ++wavefront_end;
-      else
+      } else {
         controls_.splice(wavefront_end, controls_, controls_.iterator_to(*dst));
+      }
     }
 
     ++wavefront_begin;
@@ -308,9 +306,9 @@ noexcept
               std::memory_order_relaxed))
         break;
     }
-    [[likely]]
-    if (get_color(expect) == color::white)
+    if (get_color(expect) == color::white) [[likely]] {
       continue; // Already processed in phase 1.
+    }
 
     // Process edges.
     std::lock_guard<std::mutex> bc_lck{ bc.mtx_ };
@@ -328,19 +326,19 @@ noexcept
                 std::memory_order_relaxed))
           break;
       }
-      [[likely]]
-      if (get_color(expect) != color::red)
+      if (get_color(expect) != color::red) [[likely]] {
         continue; // Already processed or already in wavefront.
+      }
 
       assert(dst != &bc);
       assert(wavefront_end != controls_.end());
       assert(wavefront_begin != controls_.iterator_to(*dst));
 
-      [[unlikely]]
-      if (wavefront_end == controls_.iterator_to(*dst))
+      if (wavefront_end == controls_.iterator_to(*dst)) [[unlikely]] {
         ++wavefront_end;
-      else
+      } else {
         controls_.splice(wavefront_end, controls_, controls_.iterator_to(*dst));
+      }
     }
   }
 
