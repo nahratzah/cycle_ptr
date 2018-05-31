@@ -3,6 +3,9 @@
 
 #include <cassert>
 #include <cstdint>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <cycle_ptr/detail/base_control.h>
 #include <cycle_ptr/detail/generation.h>
 
@@ -15,8 +18,8 @@ class control final
   private Alloc
 {
   using alloc_traits = std::allocator_traits<Alloc>;
-  using control_alloc_t = typename alloc_traits<Alloc>::template rebind_alloc<control>;
-  using control_alloc_traits_t = typename alloc_traits<Alloc>::template rebind_traits<control>;
+  using control_alloc_t = typename alloc_traits::template rebind_alloc<control>;
+  using control_alloc_traits_t = typename alloc_traits::template rebind_traits<control>;
 
   static_assert(std::is_same_v<typename alloc_traits::value_type, T>,
       "Alloc must be allocator of T.");
