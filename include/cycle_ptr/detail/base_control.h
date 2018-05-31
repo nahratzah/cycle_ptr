@@ -59,6 +59,8 @@ class base_control
     return get_color(store_refs_.load(std::memory_order_relaxed)) != color::black;
   }
 
+  static auto publisher_lookup(void* addr, std::size_t len) -> base_control*;
+
   ///\brief Used by weak to strong reference promotion.
   ///\return True if promotion succeeded, false otherwise.
   auto weak_acquire() noexcept -> bool;
@@ -214,6 +216,12 @@ class base_control::publisher {
 
   map_type::const_iterator iter_;
 };
+
+
+inline auto base_control::publisher_lookup(void* addr, std::size_t len)
+-> base_control* {
+  return publisher::lookup(addr, len);
+}
 
 
 } /* namespace cycle_ptr::detail */

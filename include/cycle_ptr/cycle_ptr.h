@@ -1,6 +1,13 @@
 #ifndef CYCLE_PTR_CYCLE_PTR_H
 #define CYCLE_PTR_CYCLE_PTR_H
 
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <boost/intrusive_ptr.hpp>
 #include <cycle_ptr/detail/control.h>
 #include <cycle_ptr/detail/vertex.h>
 
@@ -16,7 +23,7 @@ class cycle_base {
 
  protected:
   cycle_base()
-  : control_(detail::base_control::publisher::lookup(this, sizeof(this)))
+  : control_(detail::base_control::publisher_lookup(this, sizeof(this)))
   {}
 
   cycle_base(const cycle_base&)
@@ -74,41 +81,41 @@ class cycle_member_ptr
   : cycle_member_ptr(owner)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_member_ptr<U>& ptr)
-  : vertex(owner),
+  : detail::vertex(owner.control_),
     target_(ptr.target_)
   {
     ptr.throw_if_owner_expired();
-    this->vertex::reset(ptr.get_control(), false, false);
+    this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, cycle_member_ptr<U>&& ptr)
-  : cycle_member_ptr(ptr)
+  : cycle_member_ptr(owner, ptr)
   {
     ptr.reset();
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_gptr<U>& ptr)
-  : vertex(owner),
+  : detail::vertex(owner.control_),
     target_(ptr.target_)
   {
-    this->vertex::reset(ptr.target_ctrl_, false, true);
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, cycle_gptr<U>&& ptr)
-  : vertex(owner),
+  : detail::vertex(owner.control_),
     target_(std::exchange(ptr.target_, nullptr))
   {
-    this->vertex::reset(
-        boost::intrusive_ptr<base_control>(ptr.target_ctrl_.detach(), false),
+    this->detail::vertex::reset(
+        boost::intrusive_ptr<detail::base_control>(ptr.target_ctrl_.detach(), false),
         true, true);
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_weak_ptr<U>& ptr)
   : cycle_member_ptr(owner, cycle_gptr<U>(ptr))
   {}
@@ -124,7 +131,7 @@ class cycle_member_ptr
     other.throw_if_owner_expired();
 
     target_ = other.target_;
-    this->vertex::reset(other.get_control(), false, false);
+    this->detail::vertex::reset(other.get_control(), false, false);
     return *this;
   }
 
@@ -135,17 +142,17 @@ class cycle_member_ptr
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   -> cycle_member_ptr& {
     other.throw_if_owner_expired();
 
     target_ = other.target_;
-    this->vertex::reset(other.get_control(), false, false);
+    this->detail::vertex::reset(other.get_control(), false, false);
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_member_ptr<U>&& other)
   -> cycle_member_ptr& {
     *this = other;
@@ -153,20 +160,20 @@ class cycle_member_ptr
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   -> cycle_member_ptr& {
     target_ = other.target_;
-    this->vertex::reset(other.target_ctrl_, false, true);
+    this->detail::vertex::reset(other.target_ctrl_, false, true);
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
   -> cycle_member_ptr& {
     target_ = std::exchange(other.target_, nullptr);
-    this->vertex::reset(
-        boost::intrusive_ptr<base_control>(other.target_ctrl_.detach(), false),
+    this->detail::vertex::reset(
+        boost::intrusive_ptr<detail::base_control>(other.target_ctrl_.detach(), false),
         false, true);
     return *this;
   }
@@ -174,7 +181,7 @@ class cycle_member_ptr
   auto reset()
   -> void {
     target_ = nullptr;
-    this->vertex::reset();
+    this->detail::vertex::reset();
   }
 
   auto swap(cycle_member_ptr& other)
@@ -261,7 +268,7 @@ class cycle_gptr {
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(const cycle_gptr<U>& other)
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
@@ -269,13 +276,13 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire_no_red();
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(cycle_gptr<U>&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(const cycle_member_ptr<U>& other)
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
@@ -284,14 +291,14 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(cycle_member_ptr<U>&& other)
   : cycle_gptr(other)
   {
     other.reset();
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(const cycle_weak_ptr<U>& other)
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
@@ -325,7 +332,7 @@ class cycle_gptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   noexcept
   -> cycle_gptr& {
@@ -339,7 +346,7 @@ class cycle_gptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
   noexcept
   -> cycle_gptr& {
@@ -352,7 +359,7 @@ class cycle_gptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   -> cycle_gptr& {
     other.throw_if_owner_expired();
@@ -367,7 +374,7 @@ class cycle_gptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_member_ptr<U>&& other)
   -> cycle_gptr& {
     *this = other;
@@ -479,25 +486,25 @@ class cycle_weak_ptr {
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_weak_ptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(cycle_weak_ptr<U>&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_gptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {}
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_member_ptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.get_control())
@@ -519,7 +526,7 @@ class cycle_weak_ptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_weak_ptr<U>& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -528,7 +535,7 @@ class cycle_weak_ptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_weak_ptr<U>&& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -537,7 +544,7 @@ class cycle_weak_ptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -546,7 +553,7 @@ class cycle_weak_ptr {
     return *this;
   }
 
-  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -577,8 +584,8 @@ class cycle_weak_ptr {
 
   auto lock() const
   noexcept
-  -> cycle_gptr {
-    cycle_gptr result;
+  -> cycle_gptr<T> {
+    cycle_gptr<T> result;
     if (target_ctrl_ != nullptr && target_ctrl_->weak_acquire())
       result.emplace_(target_, target_ctrl_);
     return result;
@@ -633,7 +640,7 @@ noexcept
   return !x;
 }
 
-template<typename T>
+template<typename U>
 inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
@@ -654,7 +661,7 @@ noexcept
   return bool(x);
 }
 
-template<typename T>
+template<typename U>
 inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
@@ -668,18 +675,18 @@ noexcept
   return x.get() < y.get();
 }
 
-template<typename T, typename U>
+template<typename T>
 inline auto operator<(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
 -> bool {
   return std::less<typename cycle_gptr<T>::element_type*>()(x.get(), nullptr);
 }
 
-template<typename T, typename U>
+template<typename U>
 inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
-  return std::less<typename cycle_gptr<T>::element_type*>()(nullptr, y.get());
+  return std::less<typename cycle_gptr<U>::element_type*>()(nullptr, y.get());
 }
 
 template<typename T, typename U>
@@ -689,15 +696,15 @@ noexcept
   return y < x;
 }
 
-template<typename T, typename U>
+template<typename T>
 inline auto operator>(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
 -> bool {
   return nullptr < x;
 }
 
-template<typename T, typename U>
-inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_gptr<T>& y)
+template<typename U>
+inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return y < nullptr;
@@ -710,14 +717,14 @@ noexcept
   return !(y < x);
 }
 
-template<typename T, typename U>
+template<typename T>
 inline auto operator<=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
 -> bool {
   return !(nullptr < x);
 }
 
-template<typename T, typename U>
+template<typename U>
 inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
@@ -731,14 +738,14 @@ noexcept
   return !(x < y);
 }
 
-template<typename T, typename U>
+template<typename T>
 inline auto operator>=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
 -> bool {
   return !(x < nullptr);
 }
 
-template<typename T, typename U>
+template<typename U>
 inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
 -> bool {
@@ -785,7 +792,7 @@ auto allocate_cycle(Alloc&& alloc, Args&&... args)
     throw;
   }
 
-  cycle_gptr result;
+  cycle_gptr<T> result;
   result.emplace(
       elem_ptr,
       boost::intrusive_ptr<control_t>(ctrl_ptr, false));
@@ -815,7 +822,7 @@ namespace std {
  */
 template<typename T, typename U = cycle_ptr::cycle_gptr<T>>
 auto exchange(cycle_ptr::cycle_member_ptr<T>& x, U&& y) {
-  cycle_gptr<T> result = std::move(x);
+  cycle_ptr::cycle_gptr<T> result = std::move(x);
   x = std::forward<U>(y);
   return result;
 }
@@ -823,9 +830,9 @@ auto exchange(cycle_ptr::cycle_member_ptr<T>& x, U&& y) {
 template<typename T>
 struct hash<cycle_ptr::cycle_member_ptr<T>> {
   [[deprecated]]
-  using argument_type = cycle_ptr::cycle_member_ptr<T>;
+  typedef cycle_ptr::cycle_member_ptr<T> argument_type;
   [[deprecated]]
-  using result_type = std::size_t;
+  typedef std::size_t result_type;
 
   auto operator()(const cycle_ptr::cycle_member_ptr<T>& p) const
   noexcept
@@ -839,9 +846,9 @@ struct hash<cycle_ptr::cycle_gptr<T>>
 : hash<cycle_ptr::cycle_member_ptr<T>>
 {
   [[deprecated]]
-  using argument_type = cycle_ptr::cycle_gptr<T>;
+  typedef cycle_ptr::cycle_gptr<T> argument_type;
   [[deprecated]]
-  using result_type = std::size_t;
+  typedef std::size_t result_type;
 
   using hash<cycle_ptr::cycle_member_ptr<T>>::operator();
 
