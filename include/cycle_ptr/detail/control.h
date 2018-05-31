@@ -27,7 +27,7 @@ class control final
   ~control() noexcept = default;
 
  public:
-  control(Alloc alloc) noexcept
+  control(Alloc alloc)
   : Alloc(std::move(alloc))
   {}
 
