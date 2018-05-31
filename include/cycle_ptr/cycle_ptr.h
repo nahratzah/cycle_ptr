@@ -191,6 +191,13 @@ class cycle_member_ptr
         cycle_gptr<T>(std::move(*this)));
   }
 
+  auto swap(cycle_gptr<T>& other)
+  -> void {
+    std::tie(*this, other) = std::forward_as_tuple(
+        std::move(other),
+        cycle_gptr<T>(std::move(*this)));
+  }
+
   auto get() const
   -> T* {
     throw_if_owner_expired();
@@ -402,6 +409,11 @@ class cycle_gptr {
   -> void {
     std::swap(target_, other.target_);
     target_ctrl_.swap(other.target_ctrl_);
+  }
+
+  auto swap(cycle_member_ptr<T>& other)
+  -> void {
+    other.swap(*this);
   }
 
   auto get() const
@@ -625,6 +637,13 @@ noexcept
   x.swap(y);
 }
 
+template<typename T>
+inline auto swap(cycle_member_ptr<T>& x, cycle_gptr<T>& y)
+noexcept
+-> void {
+  x.swap(y);
+}
+
 
 template<typename T, typename U>
 inline auto operator==(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
@@ -759,6 +778,13 @@ noexcept
   x.swap(y);
 }
 
+template<typename T>
+inline auto swap(cycle_gptr<T>& x, cycle_member_ptr<T>& y)
+noexcept
+-> void {
+  x.swap(y);
+}
+
 
 template<typename T>
 inline auto swap(cycle_weak_ptr<T>& x, cycle_weak_ptr<T>& y)
@@ -768,6 +794,17 @@ noexcept
 }
 
 
+/**
+ * \brief Allocate a new instance of \p T, using the specificied allocator.
+ * \relates cycle_base
+ * \details
+ * Ensures the type \p T is instantiated correctly, with its control block.
+ * \tparam T The type of object to instantiate.
+ * \param alloc The allocator to use for allocating the control block.
+ * \param args The arguments passed to the constructor of type \p T.
+ * \returns A cycle_gptr to the new instance of \p T.
+ * \throws std::bad_alloc if allocating a generation fails.
+ */
 template<typename T, typename Alloc, typename... Args>
 auto allocate_cycle(Alloc&& alloc, Args&&... args)
 -> cycle_gptr<T> {
@@ -799,6 +836,18 @@ auto allocate_cycle(Alloc&& alloc, Args&&... args)
   return result;
 }
 
+/**
+ * \brief Allocate a new instance of \p T, using the default allocator.
+ * \relates cycle_base
+ * \details
+ * Ensures the type \p T is instantiated correctly, with its control block.
+ *
+ * Equivalent to calling ``allocate_cycle<T>(std::allocator<T>(), args...)``.
+ * \tparam T The type of object to instantiate.
+ * \param args The arguments passed to the constructor of type \p T.
+ * \returns A cycle_gptr to the new instance of \p T.
+ * \throws std::bad_alloc if allocating a generation fails.
+ */
 template<typename T, typename... Args>
 auto make_cycle(Args&&... args)
 -> cycle_gptr<T> {
@@ -813,6 +862,7 @@ namespace std {
 
 /**
  * \brief Specialize std::exchange.
+ * \relates cycle_ptr::cycle_member_ptr
  * \details
  * Assigns \p y to \p x, returning the previous value of \p x.
  *
