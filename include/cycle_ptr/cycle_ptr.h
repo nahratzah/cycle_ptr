@@ -369,7 +369,7 @@ class cycle_gptr {
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(const cycle_member_ptr<U>& other)
   : target_(other.target_),
-    target_ctrl_(other.target_ctrl_)
+    target_ctrl_(other.get_control())
   {
     other.throw_if_owner_expired();
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
@@ -393,7 +393,7 @@ class cycle_gptr {
   template<typename U>
   cycle_gptr(const cycle_member_ptr<U>& other, element_type* target)
   : target_(target),
-    target_ctrl_(other.target_ctrl_)
+    target_ctrl_(other.get_control())
   {
     other.throw_if_owner_expired();
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
