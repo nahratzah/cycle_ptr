@@ -959,6 +959,91 @@ noexcept
 }
 
 
+template<typename T, typename U>
+inline auto operator==(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return x.get() == y.get();
+}
+
+template<typename T, typename U>
+inline auto operator==(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return x.get() == y.get();
+}
+
+template<typename T, typename U>
+inline auto operator!=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(x == y);
+}
+
+template<typename T, typename U>
+inline auto operator!=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return !(x == y);
+}
+
+template<typename T, typename U>
+inline auto operator<(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return x.get() < y.get();
+}
+
+template<typename T, typename U>
+inline auto operator<(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return x.get() < y.get();
+}
+
+template<typename T, typename U>
+inline auto operator>(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return y < x;
+}
+
+template<typename T, typename U>
+inline auto operator>(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return y < x;
+}
+
+template<typename T, typename U>
+inline auto operator<=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(y < x);
+}
+
+template<typename T, typename U>
+inline auto operator<=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return !(y < x);
+}
+
+template<typename T, typename U>
+inline auto operator>=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
+noexcept
+-> bool {
+  return !(x < y);
+}
+
+template<typename T, typename U>
+inline auto operator>=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
+noexcept
+-> bool {
+  return !(x < y);
+}
+
+
 /**
  * \brief Allocate a new instance of \p T, using the specificied allocator.
  * \relates cycle_base
