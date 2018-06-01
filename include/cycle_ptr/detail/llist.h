@@ -204,6 +204,7 @@ class llist
 
   auto pop_front()
   -> T& {
+    assert(!empty());
     T& result = front();
     erase(begin());
     return result;
@@ -211,6 +212,7 @@ class llist
 
   auto pop_back()
   -> T& {
+    assert(!empty());
     T& result = back();
     erase(std::prev(end()));
     return result;
