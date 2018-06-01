@@ -115,6 +115,23 @@ class cycle_member_ptr
         true, true);
   }
 
+  template<typename U>
+  cycle_member_ptr(cycle_base& owner, const cycle_member_ptr<U>& ptr, element_type* target)
+  : detail::vertex(owner.control_),
+    target_(target)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  template<typename U>
+  cycle_member_ptr(cycle_base& owner, const cycle_gptr<U>& ptr, element_type* target)
+  : detail::vertex(owner.control_),
+    target_(target)
+  {
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
+  }
+
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_weak_ptr<U>& ptr)
   : cycle_member_ptr(owner, cycle_gptr<U>(ptr))
@@ -152,6 +169,21 @@ class cycle_member_ptr
     this->detail::vertex::reset(
         std::move(ptr.target_ctrl_),
         true, true);
+  }
+
+  template<typename U>
+  cycle_member_ptr(const cycle_member_ptr<U>& ptr, element_type* target)
+  : target_(target)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  template<typename U>
+  cycle_member_ptr(const cycle_gptr<U>& ptr, element_type* target)
+  : target_(target)
+  {
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
@@ -343,6 +375,28 @@ class cycle_gptr {
   {
     other.reset();
   }
+
+  template<typename U>
+  cycle_gptr(const cycle_gptr<U>& other, element_type* target) noexcept
+  : target_(target),
+    target_ctrl_(other.target_ctrl_)
+  {
+    if (target_ctrl_ != nullptr) target_ctrl_->acquire_no_red();
+  }
+
+  template<typename U>
+  cycle_gptr(const cycle_member_ptr<U>& other, element_type* target)
+  : target_(target),
+    target_ctrl_(other.target_ctrl_)
+  {
+    other.throw_if_owner_expired();
+    if (target_ctrl_ != nullptr) target_ctrl_->acquire();
+  }
+
+  cycle_gptr(cycle_gptr&& other) noexcept
+  : target_(std::exchange(other.target_, nullptr)),
+    target_ctrl_(other.target_ctrl_.detach(), false)
+  {}
 
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(const cycle_weak_ptr<U>& other)
