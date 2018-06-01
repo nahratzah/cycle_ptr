@@ -7,6 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <iosfwd>
 #include <cycle_ptr/detail/intrusive_ptr.h>
 #include <cycle_ptr/detail/control.h>
 #include <cycle_ptr/detail/vertex.h>
@@ -1151,6 +1152,23 @@ template<typename T, typename... Args>
 auto make_cycle(Args&&... args)
 -> cycle_gptr<T> {
   return allocate_cycle<T>(std::allocator<T>(), std::forward<Args>(args)...);
+}
+
+
+///\brief Write pointer to output stream.
+///\relates cycle_member_ptr
+template<typename Char, typename Traits, typename T>
+auto operator<<(basic_stream<Char, Traits>& out, const cycle_member_ptr<T>& ptr)
+-> basic_ostream<Char, Traits>& {
+  return out << ptr.get();
+}
+
+///\brief Write pointer to output stream.
+///\relates cycle_gptr
+template<typename Char, typename Traits, typename T>
+auto operator<<(basic_stream<Char, Traits>& out, const cycle_gptr<T>& ptr)
+-> basic_ostream<Char, Traits>& {
+  return out << ptr.get();
 }
 
 
