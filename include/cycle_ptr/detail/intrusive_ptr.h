@@ -397,8 +397,8 @@ noexcept
 ///\brief Write pointer to output stream.
 ///\relates intrusive_ptr
 template<typename Char, typename Traits, typename T>
-auto operator<<(basic_stream<Char, Traits>& out, const cycle_gptr<T>& ptr)
--> basic_ostream<Char, Traits>& {
+auto operator<<(std::basic_ostream<Char, Traits>& out, const intrusive_ptr<T>& ptr)
+-> std::basic_ostream<Char, Traits>& {
   return out << ptr.get();
 }
 

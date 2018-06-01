@@ -1158,16 +1158,16 @@ auto make_cycle(Args&&... args)
 ///\brief Write pointer to output stream.
 ///\relates cycle_member_ptr
 template<typename Char, typename Traits, typename T>
-auto operator<<(basic_stream<Char, Traits>& out, const cycle_member_ptr<T>& ptr)
--> basic_ostream<Char, Traits>& {
+auto operator<<(std::basic_ostream<Char, Traits>& out, const cycle_member_ptr<T>& ptr)
+-> std::basic_ostream<Char, Traits>& {
   return out << ptr.get();
 }
 
 ///\brief Write pointer to output stream.
 ///\relates cycle_gptr
 template<typename Char, typename Traits, typename T>
-auto operator<<(basic_stream<Char, Traits>& out, const cycle_gptr<T>& ptr)
--> basic_ostream<Char, Traits>& {
+auto operator<<(std::basic_ostream<Char, Traits>& out, const cycle_gptr<T>& ptr)
+-> std::basic_ostream<Char, Traits>& {
   return out << ptr.get();
 }
 
