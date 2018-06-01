@@ -249,7 +249,7 @@ class cycle_member_ptr
     target_ = std::exchange(other.target_, nullptr);
     this->detail::vertex::reset(
         std::move(other.target_ctrl_),
-        false, true);
+        true, true);
     return *this;
   }
 
