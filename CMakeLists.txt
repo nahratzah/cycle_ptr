@@ -58,7 +58,7 @@ install(EXPORT cycle_ptr DESTINATION "lib/cmake/cycle_ptr")
 configure_file(cycle_ptr-config-version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/cycle_ptr-config-version.cmake @ONLY)
 install(FILES cycle_ptr-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/cycle_ptr-config-version.cmake DESTINATION "lib/cmake/cycle_ptr")
 
-# add_subdirectory (test)
+add_subdirectory (test)
 
 find_package(Doxygen REQUIRED mscgen OPTIONAL_COMPONENTS dot)
 
