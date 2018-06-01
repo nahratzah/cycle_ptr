@@ -19,35 +19,42 @@ noexcept
        dst_gc_requested = false;
 
   std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
-  while (src_gen != src.generation_.load()) {
-    src_merge_lck.unlock();
-    src_gen = src.generation_.load();
-    src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
-  }
 
-  if (!order_invariant(*src_gen, *dst_gen)) [[likely]] {
-    while (src_gen->seq == dst_gen->seq && src_gen.get() < dst_gen.get()) [[unlikely]] {
+  if (order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
+    std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
+    while (src_gen != src.generation_) [[unlikely]] {
       src_merge_lck.unlock();
-      src_gen.swap(dst_gen);
-      std::swap(src_gc_requested, dst_gc_requested);
+      src_gen = src.generation_.load();
       src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
-
-      while (src_gen != src.generation_.load()) {
-        src_merge_lck.unlock();
-        src_gen = src.generation_.load();
-        src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
-      }
     }
 
-    std::tie(dst_gen, dst_gc_requested) = merge_(
-        std::make_tuple(dst_gen, std::exchange(dst_gc_requested, false)),
-        std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
-        src_merge_lck);
+    if (order_invariant(*src_gen, *dst_gen)) [[likely]] {
+      return src_merge_lck;
+    }
   }
+
+  std::unique_lock<std::shared_mutex> dst_merge_lck{ dst_gen->merge_mtx_ };
+  while (src_gen->seq == dst_gen->seq && dst_gen.get() < src_gen.get()) [[unlikely]] {
+    dst_merge_lck.unlock();
+    src_gen.swap(dst_gen);
+    std::swap(src_gc_requested, dst_gc_requested);
+    dst_merge_lck = std::unique_lock<std::shared_mutex>{ dst_gen->merge_mtx_ };
+
+    while (dst_gen != dst.generation_) [[unlikely]] {
+      dst_merge_lck.unlock();
+      dst_gen = dst.generation_.load();
+      dst_merge_lck = std::unique_lock<std::shared_mutex>{ dst_gen->merge_mtx_ };
+    }
+  }
+
+  std::tie(dst_gen, dst_gc_requested) = merge_(
+      std::make_tuple(dst_gen, std::exchange(dst_gc_requested, false)),
+      std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
+      dst_merge_lck);
 
   assert(!src_gc_requested);
   if (dst_gc_requested) dst_gen->gc_();
-  return src_merge_lck;
+  return dst_merge_lck;
 }
 
 auto generation::gc_()
