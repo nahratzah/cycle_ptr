@@ -26,7 +26,7 @@ noexcept
   }
 
   if (!order_invariant(*src_gen, *dst_gen)) [[likely]] {
-    while (src_gen->seq == dst_gen->seq && src_gen.get() > dst_gen.get()) [[unlikely]] {
+    while (src_gen->seq == dst_gen->seq && src_gen.get() < dst_gen.get()) [[unlikely]] {
       src_merge_lck.unlock();
       src_gen.swap(dst_gen);
       std::swap(src_gc_requested, dst_gc_requested);
@@ -40,8 +40,8 @@ noexcept
     }
 
     std::tie(dst_gen, dst_gc_requested) = merge_(
-        std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
         std::make_tuple(dst_gen, std::exchange(dst_gc_requested, false)),
+        std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
         src_merge_lck);
   }
 
