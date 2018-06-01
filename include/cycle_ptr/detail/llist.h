@@ -288,7 +288,9 @@ class llist<T, Tag>::iterator {
  private:
   explicit constexpr iterator(link<Tag>* ptr) noexcept
   : link_(ptr)
-  {}
+  {
+    assert(ptr != nullptr);
+  }
 
  public:
   auto operator*() const
@@ -380,7 +382,9 @@ class llist<T, Tag>::const_iterator {
  private:
   explicit constexpr const_iterator(const link<Tag>* ptr) noexcept
   : link_(ptr)
-  {}
+  {
+    assert(ptr != nullptr);
+  }
 
  public:
   constexpr const_iterator() noexcept = default;
@@ -522,9 +526,9 @@ auto llist<T, Tag>::erase(const_iterator b, const_iterator e)
 
   while (b != e) {
     link<Tag>*const l = const_cast<link<Tag>*>(b.link_);
+    ++b;
     assert(l != this);
     l->pred_ = l->succ_ = nullptr;
-    ++b;
   }
   return iterator(succ);
 }
