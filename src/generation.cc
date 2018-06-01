@@ -18,8 +18,6 @@ noexcept
   bool src_gc_requested = false,
        dst_gc_requested = false;
 
-  std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
-
   if (order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
     std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
     while (src_gen != src.generation_) [[unlikely]] {
