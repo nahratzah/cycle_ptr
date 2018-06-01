@@ -58,7 +58,7 @@ class base_control
   auto expired() const
   noexcept
   -> bool {
-    return get_color(store_refs_.load(std::memory_order_relaxed)) != color::black;
+    return get_color(store_refs_.load(std::memory_order_relaxed)) == color::black;
   }
 
   static auto publisher_lookup(void* addr, std::size_t len) -> intrusive_ptr<base_control>;
