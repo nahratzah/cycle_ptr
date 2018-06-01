@@ -3,12 +3,13 @@
 
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <cstddef>
 #include <functional>
 #include <new>
 #include <type_traits>
 #include <utility>
-#include <boost/intrusive_ptr.hpp>
+#include <cycle_ptr/detail/intrusive_ptr.h>
 
 namespace cycle_ptr::detail {
 
@@ -65,7 +66,7 @@ class hazard {
   using ptr_set = std::array<data, 4096u / sizeof(data)>;
 
  public:
-  using pointer = boost::intrusive_ptr<T>;
+  using pointer = intrusive_ptr<T>;
 
   hazard(const hazard&) = delete;
 
@@ -91,7 +92,7 @@ class hazard {
   -> pointer {
     for (;;) {
       // Nullptr case is trivial.
-      if (target == nullptr) return target;
+      if (target == nullptr) return nullptr;
 
       // Publish intent to acquire 'target'.
       for (;;) {
@@ -340,8 +341,6 @@ class hazard {
   static auto acquire_(T* ptr)
   noexcept
   -> T* {
-    using namespace boost;
-
     // ADL
     if (ptr != nullptr) intrusive_ptr_add_ref(ptr);
     return ptr;
@@ -351,8 +350,6 @@ class hazard {
   static auto release_(T* ptr)
   noexcept
   -> void {
-    using namespace boost;
-
     // ADL
     if (ptr != nullptr) intrusive_ptr_release(ptr);
   }
@@ -528,7 +525,7 @@ class hazard_ptr {
   }
 
   template<typename U>
-  friend auto operator==(const hazard_ptr& x, const boost::intrusive_ptr<U>& y)
+  friend auto operator==(const hazard_ptr& x, const intrusive_ptr<U>& y)
   noexcept
   -> std::enable_if_t<std::is_convertible_v<U*, T*>, bool> {
     return x == y.get();
@@ -547,7 +544,7 @@ class hazard_ptr {
   }
 
   template<typename U>
-  friend auto operator==(const boost::intrusive_ptr<U>& x, const hazard_ptr& y)
+  friend auto operator==(const intrusive_ptr<U>& x, const hazard_ptr& y)
   noexcept
   -> std::enable_if_t<std::is_convertible_v<U*, T*>, bool> {
     return y == x;
@@ -566,7 +563,7 @@ class hazard_ptr {
   }
 
   template<typename U>
-  friend auto operator!=(const hazard_ptr& x, const boost::intrusive_ptr<U>& y)
+  friend auto operator!=(const hazard_ptr& x, const intrusive_ptr<U>& y)
   noexcept
   -> std::enable_if_t<std::is_convertible_v<U*, T*>, bool> {
     return !(x == y);
@@ -585,7 +582,7 @@ class hazard_ptr {
   }
 
   template<typename U>
-  friend auto operator!=(const boost::intrusive_ptr<U>& x, const hazard_ptr& y)
+  friend auto operator!=(const intrusive_ptr<U>& x, const hazard_ptr& y)
   noexcept
   -> std::enable_if_t<std::is_convertible_v<U*, T*>, bool> {
     return !(x == y);

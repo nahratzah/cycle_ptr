@@ -13,6 +13,7 @@
 #include <cycle_ptr/detail/hazard.h>
 #include <cycle_ptr/detail/llist.h>
 #include <cycle_ptr/detail/vertex.h>
+#include <cycle_ptr/detail/intrusive_ptr.h>
 
 namespace cycle_ptr::detail {
 
@@ -60,7 +61,7 @@ class base_control
     return get_color(store_refs_.load(std::memory_order_relaxed)) != color::black;
   }
 
-  static auto publisher_lookup(void* addr, std::size_t len) -> base_control*;
+  static auto publisher_lookup(void* addr, std::size_t len) -> intrusive_ptr<base_control>;
 
   ///\brief Used by weak to strong reference promotion.
   ///\return True if promotion succeeded, false otherwise.
@@ -198,7 +199,7 @@ class base_control::publisher {
   ///\param[in] len Sizeof the object for which to find a base control.
   ///\returns Base control owning the argument address range.
   ///\throws std::runtime_error if no pushlished range covers the argument range.
-  static auto lookup(void* addr, std::size_t len) noexcept -> base_control*;
+  static auto lookup(void* addr, std::size_t len) noexcept -> intrusive_ptr<base_control>;
 
  private:
   /**
@@ -220,7 +221,7 @@ class base_control::publisher {
 
 
 inline auto base_control::publisher_lookup(void* addr, std::size_t len)
--> base_control* {
+-> intrusive_ptr<base_control> {
   return publisher::lookup(addr, len);
 }
 

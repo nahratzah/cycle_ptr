@@ -7,6 +7,7 @@
 #include <utility>
 #include <cycle_ptr/detail/color.h>
 #include <cycle_ptr/detail/base_control.h>
+#include <cycle_ptr/detail/intrusive_ptr.h>
 
 namespace cycle_ptr::detail {
 
@@ -51,8 +52,8 @@ class generation {
 
  public:
   static auto new_generation()
-  -> boost::intrusive_ptr<generation> {
-    return boost::intrusive_ptr<generation>(new generation());
+  -> intrusive_ptr<generation> {
+    return intrusive_ptr<generation>(new generation(), true);
   }
 
   static auto order_invariant(const generation& origin, const generation& dest)
@@ -182,10 +183,10 @@ class generation {
    * \returns Pointer to the merged generation.
    */
   static auto merge_(
-      std::tuple<boost::intrusive_ptr<generation>, bool> src_tpl,
-      std::tuple<boost::intrusive_ptr<generation>, bool> dst_tpl,
+      std::tuple<intrusive_ptr<generation>, bool> src_tpl,
+      std::tuple<intrusive_ptr<generation>, bool> dst_tpl,
       const std::unique_lock<std::shared_mutex>& src_merge_lck) noexcept
-  -> std::tuple<boost::intrusive_ptr<generation>, bool>;
+  -> std::tuple<intrusive_ptr<generation>, bool>;
 
   /**
    * \brief Low level merge operation.
@@ -239,7 +240,7 @@ class generation {
   std::shared_mutex red_promotion_mtx_;
 
  private:
-  ///\brief Reference counter for boost::intrusive_ptr.
+  ///\brief Reference counter for intrusive_ptr.
   std::atomic<std::uintptr_t> refs_{ 0u };
   ///\brief Flag indicating a pending GC.
   std::atomic_flag gc_flag_;

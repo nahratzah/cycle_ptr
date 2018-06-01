@@ -125,7 +125,7 @@ noexcept
       [this](base_control& bc) {
         std::lock_guard<std::mutex> lck{ bc.mtx_ }; // Lock edges_
         for (vertex& v : bc.edges_) {
-          boost::intrusive_ptr<base_control> dst = v.dst_.exchange(nullptr);
+          intrusive_ptr<base_control> dst = v.dst_.exchange(nullptr);
           if (dst != nullptr && dst->generation_ != this)
             dst->release(); // Reference count decrement.
         }
@@ -134,7 +134,7 @@ noexcept
   // Destroy unreachables.
   while (!unreachable.empty()) {
     // Transfer ownership from unreachable list to dedicated pointer.
-    const auto bc_ptr = boost::intrusive_ptr<base_control>(
+    const auto bc_ptr = intrusive_ptr<base_control>(
         &unreachable.pop_front(),
         false);
 
@@ -237,7 +237,7 @@ noexcept
       // Note that this does not trip a GC, as only edge changes can do that.
       // And release of this pointer simply releases a control, not its
       // associated edge.
-      const boost::intrusive_ptr<base_control> dst = edge.dst_.load();
+      const intrusive_ptr<base_control> dst = edge.dst_.load();
 
       // We don't need to lock dst->generation_, since it's this generation
       // which is already protected.
@@ -313,7 +313,7 @@ noexcept
     // Process edges.
     std::lock_guard<std::mutex> bc_lck{ bc.mtx_ };
     for (const vertex& v : bc.edges_) {
-      boost::intrusive_ptr<base_control> dst = v.dst_.get();
+      intrusive_ptr<base_control> dst = v.dst_.get();
       if (dst == nullptr || dst->generation_ != this)
         continue; // Skip edges outside this generation.
 
@@ -346,15 +346,15 @@ noexcept
 }
 
 auto generation::merge_(
-    std::tuple<boost::intrusive_ptr<generation>, bool> src_tpl,
-    std::tuple<boost::intrusive_ptr<generation>, bool> dst_tpl,
+    std::tuple<intrusive_ptr<generation>, bool> src_tpl,
+    std::tuple<intrusive_ptr<generation>, bool> dst_tpl,
     const std::unique_lock<std::shared_mutex>& src_merge_lck)
 noexcept
--> std::tuple<boost::intrusive_ptr<generation>, bool> {
+-> std::tuple<intrusive_ptr<generation>, bool> {
   // Convenience aliases, must be references because of
   // recursive invocation of this function.
-  boost::intrusive_ptr<generation>& src = std::get<0>(src_tpl);
-  boost::intrusive_ptr<generation>& dst = std::get<0>(dst_tpl);
+  intrusive_ptr<generation>& src = std::get<0>(src_tpl);
+  intrusive_ptr<generation>& dst = std::get<0>(dst_tpl);
 
   // Arguments assertion.
   assert(src != dst && src != nullptr && dst != nullptr);
@@ -389,7 +389,7 @@ noexcept
         // Recursion.
         std::unique_lock<std::shared_mutex> edge_merge_lck{ edge_dst_gen->merge_mtx_ };
         dst_tpl = merge_(
-            std::make_tuple(edge_dst_gen.get(), false),
+            std::make_tuple(edge_dst_gen, false),
             std::move(dst_tpl),
             edge_merge_lck);
       }
@@ -477,7 +477,7 @@ noexcept
   // release is to be invoked, leading to too many releases.
   for (base_control& bc : src->controls_) {
     assert(bc.generation_ == src);
-    bc.generation_ = boost::intrusive_ptr<generation>(dst);
+    bc.generation_ = intrusive_ptr<generation>(dst, true);
   }
 
   // Splice onto dst.

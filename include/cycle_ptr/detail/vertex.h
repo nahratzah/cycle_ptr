@@ -1,7 +1,7 @@
 #ifndef CYCLE_PTR_DETAIL_VERTEX_H
 #define CYCLE_PTR_DETAIL_VERTEX_H
 
-#include <boost/intrusive_ptr.hpp>
+#include <cycle_ptr/detail/intrusive_ptr.h>
 #include <cycle_ptr/detail/llist.h>
 #include <cycle_ptr/detail/hazard.h>
 
@@ -24,7 +24,7 @@ class vertex
   : vertex()
   {}
 
-  explicit vertex(boost::intrusive_ptr<base_control> bc) noexcept;
+  explicit vertex(intrusive_ptr<base_control> bc) noexcept;
   ~vertex() noexcept;
 
   auto reset() -> void;
@@ -42,7 +42,7 @@ class vertex
    * (Ignored for null new_dst.)
    */
   auto reset(
-      boost::intrusive_ptr<base_control> new_dst,
+      intrusive_ptr<base_control> new_dst,
       bool has_reference,
       bool no_red_promotion)
   -> void;
@@ -62,10 +62,10 @@ class vertex
  public:
   ///\brief Read the target control block.
   ///\returns The target control block of this vertex.
-  auto get_control() const noexcept -> boost::intrusive_ptr<base_control>;
+  auto get_control() const noexcept -> intrusive_ptr<base_control>;
 
  private:
-  const boost::intrusive_ptr<base_control> bc_; // Non-null.
+  const intrusive_ptr<base_control> bc_; // Non-null.
   hazard_ptr<base_control> dst_;
 };
 

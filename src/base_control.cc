@@ -33,7 +33,7 @@ base_control::~base_control() noexcept {
 auto base_control::weak_acquire()
 noexcept
 -> bool {
-  boost::intrusive_ptr<generation> gen_ptr;
+  intrusive_ptr<generation> gen_ptr;
   std::shared_lock<std::shared_mutex> lck;
 
   std::uintptr_t expect = make_refcounter(1, color::white);
@@ -87,7 +87,7 @@ noexcept
 auto base_control::gc()
 noexcept
 -> void {
-  boost::intrusive_ptr<generation> gen_ptr;
+  intrusive_ptr<generation> gen_ptr;
   do {
     gen_ptr = generation_.get();
     gen_ptr->gc();
@@ -116,7 +116,7 @@ base_control::publisher::~publisher() noexcept {
 
 auto base_control::publisher::lookup(void* addr, std::size_t len)
 noexcept
--> base_control* {
+-> intrusive_ptr<base_control> {
   const auto mtx_and_map = singleton_map_();
   std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };
 
@@ -137,7 +137,7 @@ noexcept
   // Verify if range fits.
   if (reinterpret_cast<std::uintptr_t>(pos->first.addr) + pos->first.len
       >= reinterpret_cast<std::uintptr_t>(addr) + len) [[likely]] {
-    return pos->second;
+    return intrusive_ptr<base_control>(pos->second, true);
   }
 
   throw std::runtime_error("cycle_ptr: no published control block for given address range.");

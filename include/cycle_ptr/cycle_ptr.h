@@ -7,7 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <boost/intrusive_ptr.hpp>
+#include <cycle_ptr/detail/intrusive_ptr.h>
 #include <cycle_ptr/detail/control.h>
 #include <cycle_ptr/detail/vertex.h>
 
@@ -58,7 +58,7 @@ class cycle_base {
   }
 
  private:
-  const boost::intrusive_ptr<detail::base_control> control_;
+  const detail::intrusive_ptr<detail::base_control> control_;
 };
 
 template<typename T>
@@ -111,7 +111,7 @@ class cycle_member_ptr
     target_(std::exchange(ptr.target_, nullptr))
   {
     this->detail::vertex::reset(
-        boost::intrusive_ptr<detail::base_control>(ptr.target_ctrl_.detach(), false),
+        std::move(ptr.target_ctrl_),
         true, true);
   }
 
@@ -150,7 +150,7 @@ class cycle_member_ptr
   : target_(std::exchange(ptr.target_, nullptr))
   {
     this->detail::vertex::reset(
-        boost::intrusive_ptr<detail::base_control>(ptr.target_ctrl_.detach(), false),
+        std::move(ptr.target_ctrl_),
         true, true);
   }
 
@@ -212,7 +212,7 @@ class cycle_member_ptr
   -> cycle_member_ptr& {
     target_ = std::exchange(other.target_, nullptr);
     this->detail::vertex::reset(
-        boost::intrusive_ptr<detail::base_control>(other.target_ctrl_.detach(), false),
+        std::move(other.target_ctrl_),
         false, true);
     return *this;
   }
@@ -356,7 +356,7 @@ class cycle_gptr {
   auto operator=(const cycle_gptr& other)
   noexcept
   -> cycle_gptr& {
-    boost::intrusive_ptr<detail::base_control> bc = other.target_ctrl_;
+    detail::intrusive_ptr<detail::base_control> bc = other.target_ctrl_;
     if (bc != nullptr) bc->acquire_no_red();
 
     target_ = other.target_;
@@ -369,7 +369,7 @@ class cycle_gptr {
   auto operator=(cycle_gptr&& other)
   noexcept
   -> cycle_gptr& {
-    auto bc = boost::intrusive_ptr<detail::base_control>(other.target_ctrl_.detach(), false);
+    auto bc = std::move(other.target_ctrl_);
 
     target_ = std::exchange(other.target_, nullptr);
     bc.swap(target_ctrl_);
@@ -382,7 +382,7 @@ class cycle_gptr {
   auto operator=(const cycle_gptr<U>& other)
   noexcept
   -> cycle_gptr& {
-    boost::intrusive_ptr<detail::base_control> bc = other.target_ctrl_;
+    detail::intrusive_ptr<detail::base_control> bc = other.target_ctrl_;
     if (bc != nullptr) bc->acquire_no_red();
 
     target_ = other.target_;
@@ -396,7 +396,7 @@ class cycle_gptr {
   auto operator=(cycle_gptr<U>&& other)
   noexcept
   -> cycle_gptr& {
-    auto bc = boost::intrusive_ptr<detail::base_control>(other.target_ctrl_.detach(), false);
+    auto bc = std::move(other.target_ctrl_);
 
     target_ = std::exchange(other.target_, nullptr);
     bc.swap(target_ctrl_);
@@ -410,7 +410,7 @@ class cycle_gptr {
   -> cycle_gptr& {
     other.throw_if_owner_expired();
 
-    boost::intrusive_ptr<detail::base_control> bc = other.get_control();
+    detail::intrusive_ptr<detail::base_control> bc = other.get_control();
     if (bc != nullptr) bc->acquire();
 
     target_ = other.target_;
@@ -501,18 +501,18 @@ class cycle_gptr {
   }
 
  private:
-  auto emplace_(T* new_target, boost::intrusive_ptr<detail::base_control> new_target_ctrl)
+  auto emplace_(T* new_target, detail::intrusive_ptr<detail::base_control> new_target_ctrl)
   noexcept
   -> void {
     assert(new_target_ctrl == nullptr || new_target != nullptr);
     assert(target_ctrl_ == nullptr);
 
     target_ = new_target;
-    target_ctrl_.reset(new_target_ctrl.detach(), false);
+    target_ctrl_.reset(std::move(new_target_ctrl));
   }
 
   T* target_ = nullptr;
-  boost::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
+  detail::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
 };
 
 
@@ -665,7 +665,7 @@ class cycle_weak_ptr {
 
  private:
   T* target_ = nullptr; // Valid iff target_ctrl_ != nullptr.
-  boost::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
+  detail::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
 };
 
 
@@ -1082,7 +1082,7 @@ auto allocate_cycle(Alloc&& alloc, Args&&... args)
   cycle_gptr<T> result;
   result.emplace(
       elem_ptr,
-      boost::intrusive_ptr<control_t>(ctrl_ptr, false));
+      detail::intrusive_ptr<control_t>(ctrl_ptr, false));
   return result;
 }
 

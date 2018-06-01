@@ -41,7 +41,6 @@ add_library (cycle_ptr
 set_property (TARGET cycle_ptr PROPERTY VERSION ${CYCLE_PTR_VERSION})
 set_property (TARGET cycle_ptr PROPERTY SOVERSION "0.0")
 
-find_package (Boost REQUIRED)
 find_package (Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
   target_link_libraries(cycle_ptr PUBLIC ${CMAKE_THREAD_LIBS_INIT})
@@ -49,8 +48,7 @@ endif()
 
 target_include_directories(cycle_ptr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${Boost_INCLUDE_DIR})
+    $<INSTALL_INTERFACE:include>)
 
 install(FILES ${headers} DESTINATION "include/cycle_ptr")
 install(FILES ${headers_detail} DESTINATION "include/cycle_ptr/detail")

@@ -6,10 +6,10 @@ namespace cycle_ptr::detail {
 
 
 vertex::vertex()
-: vertex(detail::base_control::publisher_lookup(this, sizeof(this)))
+: vertex(base_control::publisher_lookup(this, sizeof(this)))
 {}
 
-vertex::vertex(boost::intrusive_ptr<base_control> bc) noexcept
+vertex::vertex(intrusive_ptr<base_control> bc) noexcept
 : bc_(std::move(bc))
 {
   assert(bc_ != nullptr);
@@ -32,7 +32,7 @@ auto vertex::reset()
 
   if (dst_ == nullptr) return;
 
-  boost::intrusive_ptr<generation> src_gen = bc_->generation_.load();
+  intrusive_ptr<generation> src_gen = bc_->generation_.load();
 
   // Lock src generation against merges.
   std::shared_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
@@ -43,7 +43,7 @@ auto vertex::reset()
   }
 
   // Clear old dst and replace with nullptr.
-  const boost::intrusive_ptr<base_control> old_dst = dst_.exchange(nullptr);
+  const intrusive_ptr<base_control> old_dst = dst_.exchange(nullptr);
   if (old_dst != nullptr) {
     if (old_dst->generation_ != src_gen) {
       old_dst->release();
@@ -58,7 +58,7 @@ auto vertex::reset()
 }
 
 auto vertex::reset(
-    boost::intrusive_ptr<base_control> new_dst,
+    intrusive_ptr<base_control> new_dst,
     bool has_reference,
     bool no_red_promotion)
 -> void {
@@ -79,7 +79,7 @@ auto vertex::reset(
 
   // Source generation.
   // (May be updated below, but must have a lifetime that exceeds either lock.)
-  boost::intrusive_ptr<generation> src_gen = bc_->generation_.load();
+  intrusive_ptr<generation> src_gen = bc_->generation_.load();
 
   // Declare, but do not acquire, lock for fix_ordering result.
   std::unique_lock<std::shared_mutex> src_unique_merge_lck;
@@ -139,7 +139,7 @@ auto vertex::reset(
   assert(src_gen == bc_->generation_);
 
   // Clear old dst and replace with new dst.
-  const boost::intrusive_ptr<base_control> old_dst = dst_.exchange(std::move(new_dst));
+  const intrusive_ptr<base_control> old_dst = dst_.exchange(std::move(new_dst));
   if (old_dst != nullptr) {
     if (old_dst->generation_ != src_gen) {
       old_dst->release();
@@ -164,7 +164,7 @@ noexcept
 
 auto vertex::get_control() const
 noexcept
--> boost::intrusive_ptr<base_control> {
+-> intrusive_ptr<base_control> {
   return dst_.load();
 }
 
