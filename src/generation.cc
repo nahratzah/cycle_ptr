@@ -460,7 +460,7 @@ noexcept
     assert(dst->gc_flag_.test_and_set());
 
   // Update everything in src, to be moveable to dst.
-  std::lock_guard<std::shared_mutex> src_lck{ src->mtx_ };
+  assert(x_mtx_lck.owns_lock() && x_mtx_lck.mutex() == &src->mtx_);
   // Stage 1: Update edge reference counters.
   for (base_control& bc : src->controls_) {
     std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
