@@ -393,11 +393,6 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
   }
 
-  cycle_gptr(cycle_gptr&& other) noexcept
-  : target_(std::exchange(other.target_, nullptr)),
-    target_ctrl_(other.target_ctrl_.detach(), false)
-  {}
-
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(const cycle_weak_ptr<U>& other)
   : target_(other.target_),
