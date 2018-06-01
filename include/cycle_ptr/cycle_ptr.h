@@ -1209,6 +1209,88 @@ struct hash<cycle_ptr::cycle_gptr<T>>
 };
 
 
+///\brief Perform static cast on pointer.
+///\relates cycle_ptr::cycle_gptr
+template<typename T, typename U>
+auto static_pointer_cast(const cycle_ptr::cycle_gptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      static_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform dynamic cast on pointer.
+///\relates cycle_ptr::cycle_gptr
+template<typename T, typename U>
+auto dynamic_pointer_cast(const cycle_ptr::cycle_gptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      dynamic_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform const cast on pointer.
+///\relates cycle_ptr::cycle_gptr
+template<typename T, typename U>
+auto const_pointer_cast(const cycle_ptr::cycle_gptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      const_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform reinterpret cast on pointer.
+///\relates cycle_ptr::cycle_gptr
+template<typename T, typename U>
+auto reinterpret_pointer_cast(const cycle_ptr::cycle_gptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      reinterpret_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+
+///\brief Perform static cast on pointer.
+///\relates cycle_ptr::cycle_member_ptr
+template<typename T, typename U>
+auto static_pointer_cast(const cycle_ptr::cycle_member_ptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      static_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform dynamic cast on pointer.
+///\relates cycle_ptr::cycle_member_ptr
+template<typename T, typename U>
+auto dynamic_pointer_cast(const cycle_ptr::cycle_member_ptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      dynamic_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform const cast on pointer.
+///\relates cycle_ptr::cycle_member_ptr
+template<typename T, typename U>
+auto const_pointer_cast(const cycle_ptr::cycle_member_ptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      const_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+///\brief Perform reinterpret cast on pointer.
+///\relates cycle_ptr::cycle_member_ptr
+template<typename T, typename U>
+auto reinterpret_pointer_cast(const cycle_ptr::cycle_member_ptr<U>& r)
+-> cycle_ptr::cycle_gptr<T> {
+  return cycle_ptr::cycle_gptr<T>(
+      r,
+      reinterpret_cast<typename cycle_ptr::cycle_gptr<T>::element_type*>(r.get()));
+}
+
+
 } /* namespace std */
 
 #endif /* CYCLE_PTR_CYCLE_PTR_H */
