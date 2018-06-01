@@ -62,6 +62,17 @@ class intrusive_ptr {
     return *this;
   }
 
+  ~intrusive_ptr() noexcept {
+    if (ptr_ != nullptr)
+      intrusive_ptr_release(ptr_); // ADL
+  }
+
+  auto reset() noexcept
+  -> void {
+    if (ptr_ != nullptr)
+      intrusive_ptr_release(std::exchange(ptr_, nullptr)); // ADL
+  }
+
   auto swap(intrusive_ptr& other)
   noexcept
   -> void {
@@ -96,11 +107,6 @@ class intrusive_ptr {
 
   explicit operator bool() const noexcept {
     return ptr_ != nullptr;
-  }
-
-  ~intrusive_ptr() noexcept {
-    if (ptr_ != nullptr)
-      intrusive_ptr_release(ptr_); // ADL
   }
 
  private:
