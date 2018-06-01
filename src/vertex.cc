@@ -141,20 +141,29 @@ auto vertex::reset(
 
   // Clear old dst and replace with new dst.
   const intrusive_ptr<base_control> old_dst = dst_.exchange(std::move(new_dst));
+  bool drop_old_reference = false;
+  bool gc_old_reference = false;
   if (old_dst != nullptr) {
     if (old_dst->generation_ != src_gen) {
-      old_dst->release();
+      drop_old_reference = true;
     } else {
       // Because store_refs_ may be a zero reference counter, we can't return
       // the pointer.
       const std::uintptr_t refs = old_dst->store_refs_.load(std::memory_order_relaxed);
       if (get_refs(refs) == 0u && get_color(refs) != color::black)
-        old_dst->gc();
+        gc_old_reference = true;
     }
   }
 
-  // Finally, decrement the reference counter.
-  if (drop_reference) new_dst->release(false);
+  // Release locks.
+  if (src_merge_lck.owns_lock()) src_merge_lck.unlock();
+  if (src_unique_merge_lck.owns_lock()) src_unique_merge_lck.unlock();
+
+  // Finally, decrement the reference counters.
+  // We do this outside the lock.
+  if (drop_reference) new_dst->release();
+  if (drop_old_reference) old_dst->release();
+  if (gc_old_reference) old_dst->gc();
 }
 
 auto vertex::owner_is_expired() const
