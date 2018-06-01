@@ -14,15 +14,15 @@ base_control::~base_control() noexcept {
   if (under_construction) {
     assert(store_refs_.load() == make_refcounter(1u, color::white));
     assert(this->linked());
-    assert(control_refs_.load() == 1u);
 
     // Manually unlink from generation.
     generation_.load()->unlink(*this);
   } else {
     assert(store_refs_.load() == make_refcounter(0u, color::black));
     assert(!this->linked());
-    assert(control_refs_.load() == 0u);
   }
+
+  assert(control_refs_.load() == 0u);
 
 #ifndef NDEBUG
   std::lock_guard<std::mutex> edge_lck{ mtx_ };

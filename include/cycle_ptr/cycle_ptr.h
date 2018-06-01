@@ -18,6 +18,9 @@ template<typename> class cycle_member_ptr;
 template<typename> class cycle_gptr;
 template<typename> class cycle_weak_ptr;
 
+template<typename T, typename Alloc, typename... Args>
+auto allocate_cycle(Alloc&& alloc, Args&&... args) -> cycle_gptr<T>;
+
 class cycle_base {
   template<typename> friend class cycle_member_ptr;
 
@@ -324,6 +327,9 @@ class cycle_gptr {
   template<typename> friend class cycle_gptr;
   template<typename> friend class cycle_weak_ptr;
 
+  template<typename Type, typename Alloc, typename... Args>
+  friend auto cycle_ptr::allocate_cycle(Alloc&& alloc, Args&&... args) -> cycle_gptr<Type>;
+
  public:
   using element_type = std::remove_extent_t<T>;
   using weak_type = cycle_weak_ptr<T>;
@@ -557,7 +563,7 @@ class cycle_gptr {
     assert(target_ctrl_ == nullptr);
 
     target_ = new_target;
-    target_ctrl_.reset(std::move(new_target_ctrl));
+    target_ctrl_ = std::move(new_target_ctrl);
   }
 
   T* target_ = nullptr;
@@ -1107,31 +1113,25 @@ noexcept
 template<typename T, typename Alloc, typename... Args>
 auto allocate_cycle(Alloc&& alloc, Args&&... args)
 -> cycle_gptr<T> {
-  using control_t = detail::control<T, Alloc>;
-  using alloc_traits = typename control_t::control_alloc_traits_t;
-  using alloc_t = typename control_t::control_alloc_t;
+  using alloc_t = typename std::allocator_traits<Alloc>::template rebind_alloc<T>;
+  using control_t = detail::control<T, alloc_t>;
+  using alloc_traits = typename std::allocator_traits<Alloc>::template rebind_traits<control_t>;
+  using ctrl_alloc_t = typename std::allocator_traits<Alloc>::template rebind_alloc<control_t>;
 
-  alloc_t ctrl_alloc = alloc;
+  ctrl_alloc_t ctrl_alloc = std::forward<Alloc>(alloc);
 
-  T* elem_ptr;
-  control_t* ctrl_ptr = alloc_traits::allocate(ctrl_alloc, 1);
+  control_t* raw_ctrl_ptr = alloc_traits::allocate(ctrl_alloc, 1);
   try {
-    alloc_traits::construct(ctrl_alloc, ctrl_ptr, std::forward<Alloc>(alloc));
-    try {
-      elem_ptr = ctrl_ptr->instantiate_(std::forward<Args>(args)...);
-    } catch (...) {
-      alloc_traits::destroy(ctrl_alloc, ctrl_ptr);
-      throw;
-    }
+    alloc_traits::construct(ctrl_alloc, raw_ctrl_ptr, ctrl_alloc);
   } catch (...) {
-    alloc_traits::deallocate(ctrl_alloc, ctrl_ptr, 1);
+    alloc_traits::deallocate(ctrl_alloc, raw_ctrl_ptr, 1);
     throw;
   }
+  auto ctrl_ptr = detail::intrusive_ptr<detail::base_control>(raw_ctrl_ptr, false);
+  T* elem_ptr = raw_ctrl_ptr->instantiate(std::forward<Args>(args)...);
 
   cycle_gptr<T> result;
-  result.emplace(
-      elem_ptr,
-      detail::intrusive_ptr<control_t>(ctrl_ptr, false));
+  result.emplace_(elem_ptr, std::move(ctrl_ptr));
   return result;
 }
 

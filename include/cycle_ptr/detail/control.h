@@ -26,9 +26,6 @@ class control final
 
   control(const control&) = delete;
 
- private:
-  ~control() noexcept = default;
-
  public:
   control(Alloc alloc)
   : Alloc(std::move(alloc))
