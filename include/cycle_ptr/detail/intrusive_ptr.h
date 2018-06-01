@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <iosfwd>
 #include <utility>
 
 namespace cycle_ptr::detail {
@@ -391,6 +392,14 @@ auto operator>=(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
 -> bool {
   return !(x < nullptr);
+}
+
+///\brief Write pointer to output stream.
+///\relates intrusive_ptr
+template<typename Char, typename Traits, typename T>
+auto operator<<(basic_stream<Char, Traits>& out, const cycle_gptr<T>& ptr)
+-> basic_ostream<Char, Traits>& {
+  return out << ptr.get();
 }
 
 
