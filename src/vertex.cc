@@ -20,10 +20,11 @@ vertex::~vertex() noexcept {
   if (bc_->expired()) {
     assert(dst_ == nullptr);
   } else {
-    assert(this->link<vertex>::linked());
     reset();
-    bc_->erase(*this);
   }
+
+  assert(this->link<vertex>::linked());
+  bc_->erase(*this);
 }
 
 auto vertex::reset()
