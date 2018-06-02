@@ -29,7 +29,7 @@ class cycle_allocator
 
   template<typename T>
   struct rebind {
-    using other = cycle_allocator<std::allocator_traits<Nested>::template rebind_alloc<T>>;
+    using other = cycle_allocator<typename std::allocator_traits<Nested>::template rebind_alloc<T>>;
   };
 
   template<typename Other>
@@ -63,7 +63,7 @@ class cycle_allocator
   template<typename Dummy = void>
   auto select_on_container_copy_construction()
   -> cycle_allocator {
-    static_assert(false,
+    static_assert(std::is_void_v<Dummy> && false,
         "You must explicitly specify an allocator with owner during copy.");
     return *this;
   }
