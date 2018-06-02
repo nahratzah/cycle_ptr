@@ -15,44 +15,58 @@ noexcept
 -> std::unique_lock<std::shared_mutex> {
   auto src_gen = src.generation_.load(),
        dst_gen = dst.generation_.load();
-  bool src_gc_requested = false,
-       dst_gc_requested = false;
+  bool dst_gc_requested = false;
 
-  if (order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
-    std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
-    while (src_gen != src.generation_) [[unlikely]] {
-      src_merge_lck.unlock();
+  std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
+  for (;;) {
+    if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
+      while (src_gen != src.generation_) [[unlikely]] {
+        src_merge_lck.unlock();
+        src_gen = src.generation_.load();
+        src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+      }
+
+      if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[likely]] {
+        break; // break out of for(;;) loop
+      }
+    }
+    src_merge_lck.unlock();
+
+    bool src_gc_requested = false;
+    if (src_gen->seq == dst_gen->seq && dst_gen > src_gen) {
+      dst_gen.swap(src_gen);
+      std::swap(src_gc_requested, dst_gc_requested);
+    }
+
+    std::tie(dst_gen, dst_gc_requested) = merge_(
+        std::make_tuple(std::move(dst_gen), std::exchange(dst_gc_requested, false)),
+        std::make_tuple(src_gen, std::exchange(src_gc_requested, false)));
+
+    // Update dst_gen, in case another merge moved dst away from under us.
+    if (dst_gen != dst.generation_) [[unlikely]] {
+      if (std::exchange(dst_gc_requested, false)) dst_gen->gc_();
+      dst_gen = dst.generation_;
+    }
+
+    // Update src_gen, in case another merge moved src away from under us.
+    assert(!src_gc_requested);
+    assert(!src_merge_lck.owns_lock());
+    if (src_gen != src.generation_) [[unlikely]] {
       src_gen = src.generation_.load();
       src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
-    }
-
-    if (order_invariant(*src_gen, *dst_gen)) [[likely]] {
-      return src_merge_lck;
+    } else {
+      src_merge_lck.lock();
     }
   }
 
-  std::unique_lock<std::shared_mutex> dst_merge_lck{ dst_gen->merge_mtx_ };
-  while (src_gen->seq == dst_gen->seq && dst_gen.get() < src_gen.get()) [[unlikely]] {
-    dst_merge_lck.unlock();
-    src_gen.swap(dst_gen);
-    std::swap(src_gc_requested, dst_gc_requested);
-    dst_merge_lck = std::unique_lock<std::shared_mutex>{ dst_gen->merge_mtx_ };
+  // Validate post condition.
+  assert(src_gen == src.generation_);
+  assert(src_merge_lck.owns_lock() && src_merge_lck.mutex() == &src_gen->merge_mtx_);
+  assert(src_gen == dst.generation_.load()
+      || order_invariant(*src_gen, *dst.generation_.load()));
 
-    while (dst_gen != dst.generation_) [[unlikely]] {
-      dst_merge_lck.unlock();
-      dst_gen = dst.generation_.load();
-      dst_merge_lck = std::unique_lock<std::shared_mutex>{ dst_gen->merge_mtx_ };
-    }
-  }
-
-  std::tie(dst_gen, dst_gc_requested) = merge_(
-      std::make_tuple(dst_gen, std::exchange(dst_gc_requested, false)),
-      std::make_tuple(src_gen, std::exchange(src_gc_requested, false)),
-      dst_merge_lck);
-
-  assert(!src_gc_requested);
   if (dst_gc_requested) dst_gen->gc_();
-  return dst_merge_lck;
+  return src_merge_lck;
 }
 
 auto generation::gc_()
@@ -352,8 +366,7 @@ noexcept
 
 auto generation::merge_(
     std::tuple<intrusive_ptr<generation>, bool> src_tpl,
-    std::tuple<intrusive_ptr<generation>, bool> dst_tpl,
-    const std::unique_lock<std::shared_mutex>& src_merge_lck)
+    std::tuple<intrusive_ptr<generation>, bool> dst_tpl)
 noexcept
 -> std::tuple<intrusive_ptr<generation>, bool> {
   // Convenience aliases, must be references because of
@@ -372,6 +385,7 @@ noexcept
   // Lock out GC, controls_ modifications, and merges in src.
   // (We use unique_lock instead of lock_guard, to validate
   // correctness at call to merge0_.)
+  const std::unique_lock<std::shared_mutex> src_merge_lck{ src->merge_mtx_ };
   const std::unique_lock<std::shared_mutex> src_lck{ src->mtx_ };
 
   // Cascade merge operation into edges.
@@ -392,11 +406,9 @@ noexcept
         if (order_invariant(*dst, *edge_dst_gen)) break;
 
         // Recursion.
-        std::unique_lock<std::shared_mutex> edge_merge_lck{ edge_dst_gen->merge_mtx_ };
         dst_tpl = merge_(
             std::make_tuple(edge_dst_gen, false),
-            std::move(dst_tpl),
-            edge_merge_lck);
+            std::move(dst_tpl));
       }
     }
   }

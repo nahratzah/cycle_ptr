@@ -178,14 +178,11 @@ class generation {
    * Also, if \p src and \p dst have the same sequence,
    * address of \p src must be before address of \p dst.
    * \param x,y Generations to merge.
-   * \param src_merge_lck Lock on ``merge_mtx_`` in \p src.
-   * Used for validation only.
    * \returns Pointer to the merged generation.
    */
   static auto merge_(
       std::tuple<intrusive_ptr<generation>, bool> src_tpl,
-      std::tuple<intrusive_ptr<generation>, bool> dst_tpl,
-      const std::unique_lock<std::shared_mutex>& src_merge_lck) noexcept
+      std::tuple<intrusive_ptr<generation>, bool> dst_tpl) noexcept
   -> std::tuple<intrusive_ptr<generation>, bool>;
 
   /**
