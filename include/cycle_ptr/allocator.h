@@ -56,7 +56,7 @@ class cycle_allocator
   template<typename T, typename... Args>
   auto construct(T* ptr, Args&&... args)
   -> void {
-    detail::base_control::publisher pub{ ptr, sizeof(T), control_.get() };
+    detail::base_control::publisher pub{ ptr, sizeof(T), *control_ };
     std::allocator_traits<Nested>::construct(*this, ptr, std::forward<Args>(args)...);
   }
 
