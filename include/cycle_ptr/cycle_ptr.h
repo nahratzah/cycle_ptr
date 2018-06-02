@@ -1114,14 +1114,14 @@ noexcept
  * \throws std::bad_alloc if allocating a generation fails.
  */
 template<typename T, typename Alloc, typename... Args>
-auto allocate_cycle(Alloc&& alloc, Args&&... args)
+auto allocate_cycle(Alloc alloc, Args&&... args)
 -> cycle_gptr<T> {
   using alloc_t = typename std::allocator_traits<Alloc>::template rebind_alloc<T>;
   using control_t = detail::control<T, alloc_t>;
   using alloc_traits = typename std::allocator_traits<Alloc>::template rebind_traits<control_t>;
   using ctrl_alloc_t = typename std::allocator_traits<Alloc>::template rebind_alloc<control_t>;
 
-  ctrl_alloc_t ctrl_alloc = std::forward<Alloc>(alloc);
+  ctrl_alloc_t ctrl_alloc = alloc;
 
   control_t* raw_ctrl_ptr = alloc_traits::allocate(ctrl_alloc, 1);
   try {
