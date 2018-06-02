@@ -29,7 +29,7 @@ class cycle_base {
 
  protected:
   cycle_base()
-  : control_(detail::base_control::publisher_lookup(this, sizeof(this)))
+  : control_(detail::base_control::publisher_lookup(this, sizeof(*this)))
   {}
 
   cycle_base(const cycle_base&)

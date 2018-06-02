@@ -6,7 +6,7 @@ namespace cycle_ptr::detail {
 
 
 vertex::vertex()
-: vertex(base_control::publisher_lookup(this, sizeof(this)))
+: vertex(base_control::publisher_lookup(this, sizeof(*this)))
 {}
 
 vertex::vertex(intrusive_ptr<base_control> bc) noexcept
