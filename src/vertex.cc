@@ -122,7 +122,7 @@ auto vertex::reset(
   assert(src_gen == bc_->generation_);
 
   // Clear old dst and replace with new dst.
-  const intrusive_ptr<base_control> old_dst = dst_.exchange(std::move(new_dst));
+  const intrusive_ptr<base_control> old_dst = dst_.exchange(new_dst);
   bool drop_old_reference = false;
   bool gc_old_reference = false;
   if (old_dst != nullptr) {
