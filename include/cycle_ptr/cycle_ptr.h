@@ -20,7 +20,7 @@ template<typename> class cycle_gptr;
 template<typename> class cycle_weak_ptr;
 
 template<typename T, typename Alloc, typename... Args>
-auto allocate_cycle(Alloc&& alloc, Args&&... args) -> cycle_gptr<T>;
+auto allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<T>;
 
 class cycle_base {
   template<typename> friend class cycle_member_ptr;
@@ -331,7 +331,7 @@ class cycle_gptr {
   template<typename> friend class cycle_weak_ptr;
 
   template<typename Type, typename Alloc, typename... Args>
-  friend auto cycle_ptr::allocate_cycle(Alloc&& alloc, Args&&... args) -> cycle_gptr<Type>;
+  friend auto cycle_ptr::allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<Type>;
 
  public:
   using element_type = std::remove_extent_t<T>;
