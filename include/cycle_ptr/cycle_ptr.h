@@ -205,15 +205,17 @@ class cycle_member_ptr
   -> cycle_member_ptr& {
     other.throw_if_owner_expired();
 
-    target_ = other.target_;
     this->detail::vertex::reset(other.get_control(), false, false);
+    target_ = other.target_;
     return *this;
   }
 
   auto operator=(cycle_member_ptr&& other)
   -> cycle_member_ptr& {
-    *this = other;
-    other.reset();
+    if (this != &other) [[likely]] {
+      *this = other;
+      other.reset();
+    }
     return *this;
   }
 
@@ -222,8 +224,8 @@ class cycle_member_ptr
   -> cycle_member_ptr& {
     other.throw_if_owner_expired();
 
-    target_ = other.target_;
     this->detail::vertex::reset(other.get_control(), false, false);
+    target_ = other.target_;
     return *this;
   }
 
@@ -238,25 +240,25 @@ class cycle_member_ptr
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   -> cycle_member_ptr& {
-    target_ = other.target_;
     this->detail::vertex::reset(other.target_ctrl_, false, true);
+    target_ = other.target_;
     return *this;
   }
 
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
   -> cycle_member_ptr& {
-    target_ = std::exchange(other.target_, nullptr);
     this->detail::vertex::reset(
         std::move(other.target_ctrl_),
         true, true);
+    target_ = std::exchange(other.target_, nullptr);
     return *this;
   }
 
   auto reset()
   -> void {
-    target_ = nullptr;
     this->detail::vertex::reset();
+    target_ = nullptr;
   }
 
   auto swap(cycle_member_ptr& other)
