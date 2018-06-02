@@ -18,12 +18,14 @@ namespace cycle_ptr {
 template<typename> class cycle_member_ptr;
 template<typename> class cycle_gptr;
 template<typename> class cycle_weak_ptr;
+template<typename> class cycle_allocator;
 
 template<typename T, typename Alloc, typename... Args>
 auto allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<T>;
 
 class cycle_base {
   template<typename> friend class cycle_member_ptr;
+  template<typename> friend class cycle_allocator;
 
  protected:
   cycle_base()

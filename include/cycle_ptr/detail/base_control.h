@@ -15,6 +15,10 @@
 #include <cycle_ptr/detail/vertex.h>
 #include <cycle_ptr/detail/intrusive_ptr.h>
 
+namespace cycle_ptr {
+template<typename> class cycle_allocator;
+} /* namespace cycle_ptr */
+
 namespace cycle_ptr::detail {
 
 
@@ -23,6 +27,7 @@ class base_control
 {
   friend class generation;
   friend class vertex;
+  template<typename> friend class cycle_ptr::cycle_allocator;
 
   friend auto intrusive_ptr_add_ref(base_control* bc)
   noexcept
