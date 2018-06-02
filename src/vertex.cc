@@ -82,36 +82,21 @@ auto vertex::reset(
   // (May be updated below, but must have a lifetime that exceeds either lock.)
   intrusive_ptr<generation> src_gen = bc_->generation_.load();
 
-  // Declare, but do not acquire, lock for fix_ordering result.
-  std::unique_lock<std::shared_mutex> src_unique_merge_lck;
-
   // Lock src generation against merges.
-  std::shared_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
-  while (src_gen != bc_->generation_) {
-    src_merge_lck.unlock();
-    src_gen = bc_->generation_.load();
+  std::shared_lock<std::shared_mutex> src_merge_lck;
+  if (new_dst != nullptr) {
     src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
-  }
-
-  // Update ``new_dst`` reference counter for edge.
-  if (new_dst == nullptr) {
-    /* SKIP */
-  } else if (new_dst->generation_ == src_gen) {
-    drop_reference = has_reference;
-  } else if (generation::order_invariant(*src_gen, *new_dst->generation_.load())) {
-    if (!has_reference) {
-      if (no_red_promotion)
-        new_dst->acquire_no_red();
-      else
-        new_dst->acquire();
+    while (src_gen != bc_->generation_) {
+      src_merge_lck.unlock();
+      src_gen = bc_->generation_.load();
+      src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
     }
   } else {
-    // Reordering of generations needed.
-    src_merge_lck.unlock();
-    src_unique_merge_lck = generation::fix_ordering(*bc_, *new_dst);
+    // Maybe merge generations, if required to maintain order invariant.
+    src_merge_lck = generation::fix_ordering(*bc_, *new_dst);
     src_gen = bc_->generation_.load(); // Update, since it may have changed.
-    assert(src_unique_merge_lck.owns_lock());
-    assert(src_unique_merge_lck.mutex() == &src_gen->merge_mtx_);
+    assert(src_merge_lck.owns_lock());
+    assert(src_merge_lck.mutex() == &src_gen->merge_mtx_);
 
     if (new_dst->generation_ != src_gen) {
       // Guaranteed by generation::fix_ordering call.
@@ -155,9 +140,8 @@ auto vertex::reset(
     }
   }
 
-  // Release locks.
-  if (src_merge_lck.owns_lock()) src_merge_lck.unlock();
-  if (src_unique_merge_lck.owns_lock()) src_unique_merge_lck.unlock();
+  // Release merge lock.
+  src_merge_lck.unlock();
 
   // Finally, decrement the reference counters.
   // We do this outside the lock.

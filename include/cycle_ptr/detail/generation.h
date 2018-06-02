@@ -106,7 +106,7 @@ class generation {
    * \returns A lock to hold while creating the edge.
    */
   static auto fix_ordering(base_control& src, base_control& dst) noexcept
-  -> std::unique_lock<std::shared_mutex>;
+  -> std::shared_lock<std::shared_mutex>;
 
  private:
   /**

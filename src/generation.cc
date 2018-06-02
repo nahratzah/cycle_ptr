@@ -12,18 +12,18 @@ noexcept
 
 auto generation::fix_ordering(base_control& src, base_control& dst)
 noexcept
--> std::unique_lock<std::shared_mutex> {
+-> std::shared_lock<std::shared_mutex> {
   auto src_gen = src.generation_.load(),
        dst_gen = dst.generation_.load();
   bool dst_gc_requested = false;
 
-  std::unique_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
+  std::shared_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
   for (;;) {
     if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
       while (src_gen != src.generation_) [[unlikely]] {
         src_merge_lck.unlock();
         src_gen = src.generation_.load();
-        src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+        src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
       }
 
       if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[likely]] {
@@ -53,7 +53,7 @@ noexcept
     assert(!src_merge_lck.owns_lock());
     if (src_gen != src.generation_) [[unlikely]] {
       src_gen = src.generation_.load();
-      src_merge_lck = std::unique_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+      src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
     } else {
       src_merge_lck.lock();
     }
