@@ -115,7 +115,6 @@ base_control::publisher::~publisher() noexcept {
 }
 
 auto base_control::publisher::lookup(void* addr, std::size_t len)
-noexcept
 -> intrusive_ptr<base_control> {
   const auto mtx_and_map = singleton_map_();
   std::shared_lock<std::shared_mutex> lck{ std::get<std::shared_mutex&>(mtx_and_map) };

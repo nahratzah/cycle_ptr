@@ -199,7 +199,7 @@ class base_control::publisher {
   ///\param[in] len Sizeof the object for which to find a base control.
   ///\returns Base control owning the argument address range.
   ///\throws std::runtime_error if no pushlished range covers the argument range.
-  static auto lookup(void* addr, std::size_t len) noexcept -> intrusive_ptr<base_control>;
+  static auto lookup(void* addr, std::size_t len) -> intrusive_ptr<base_control>;
 
  private:
   /**
