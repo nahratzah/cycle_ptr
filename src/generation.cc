@@ -122,9 +122,7 @@ noexcept
         reachable_end, controls_.end(),
         [](base_control& bc) {
           // Acquire ownership of control blocks for unreachable list.
-          [[maybe_unused]]
-          const auto old_refcount = bc.control_refs_.fetch_add(1u, std::memory_order_acquire);
-          assert(old_refcount > 0u && old_refcount < UINTPTR_MAX);
+          intrusive_ptr_add_ref(&bc); // ADL
 
           // Colour change.
           [[maybe_unused]]
@@ -472,7 +470,10 @@ noexcept
     assert(dst->gc_flag_.test_and_set());
 
   // Update everything in src, to be moveable to dst.
+  // We lock dst now, as our predicates check for dst to be valid.
   assert(x_mtx_lck.owns_lock() && x_mtx_lck.mutex() == &src->mtx_);
+  std::lock_guard<std::shared_mutex> dst_lck{ dst->mtx_ };
+
   // Stage 1: Update edge reference counters.
   for (base_control& bc : src->controls_) {
     std::lock_guard<std::mutex> edge_lck{ bc.mtx_ };
@@ -480,12 +481,12 @@ noexcept
       const auto edge_dst = edge.dst_.get();
       assert(edge_dst == nullptr
           || edge_dst->generation_ == src
-          || edge_dst->generation_.load()->seq == dst->seq
+          || edge_dst->generation_ == dst
           || order_invariant(*dst, *edge_dst->generation_.load()));
 
       // Update reference counters.
       // (This predicate is why stage 2 must happen after stage 1.)
-      if (edge_dst->generation_ == dst) edge_dst->release(false);
+      if (edge_dst->generation_ == dst) edge_dst->release(true);
     }
   }
   // Stage 2: switch generation pointers.
@@ -498,7 +499,6 @@ noexcept
   }
 
   // Splice onto dst.
-  std::lock_guard<std::shared_mutex> dst_lck{ dst->mtx_ };
   dst->controls_.splice(dst->controls_.end(), src->controls_);
 
   // Fulfill our promise of src GC.

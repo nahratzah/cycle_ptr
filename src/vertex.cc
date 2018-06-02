@@ -84,7 +84,7 @@ auto vertex::reset(
 
   // Lock src generation against merges.
   std::shared_lock<std::shared_mutex> src_merge_lck;
-  if (new_dst != nullptr) {
+  if (new_dst == nullptr) {
     src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
     while (src_gen != bc_->generation_) {
       src_merge_lck.unlock();

@@ -60,6 +60,39 @@ TEST(assignment) {
   CHECK(target_destroyed);
 }
 
+TEST(self_reference) {
+  bool destroyed = false;
+  cycle_gptr<owner> ptr = make_cycle<owner>(&destroyed);
+  ptr->target = ptr;
+
+  CHECK(!destroyed);
+  ptr = nullptr;
+  CHECK(destroyed);
+}
+
+TEST(cycle) {
+  bool first_destroyed = false;
+  bool second_destroyed = false;
+  cycle_gptr<owner> ptr_1 = make_cycle<owner>(&first_destroyed);
+  cycle_gptr<owner> ptr_2 = make_cycle<owner>(&second_destroyed);
+  ptr_1->target = ptr_2;
+  ptr_2->target = ptr_1;
+
+  REQUIRE CHECK_EQUAL(ptr_2, ptr_1->target);
+  REQUIRE CHECK_EQUAL(ptr_1, ptr_2->target);
+
+  CHECK(!first_destroyed);
+  CHECK(!second_destroyed);
+
+  ptr_1 = nullptr;
+  CHECK(!first_destroyed);
+  CHECK(!second_destroyed);
+
+  ptr_2 = nullptr;
+  CHECK(first_destroyed);
+  CHECK(second_destroyed);
+}
+
 int main() {
   return UnitTest::RunAllTests();
 }
