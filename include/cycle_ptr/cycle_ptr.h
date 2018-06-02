@@ -144,6 +144,19 @@ class cycle_member_ptr
   cycle_member_ptr() {}
   cycle_member_ptr([[maybe_unused]] std::nullptr_t nil) {}
 
+  cycle_member_ptr(const cycle_member_ptr& ptr)
+  : target_(ptr.target_)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  cycle_member_ptr(cycle_member_ptr&& ptr)
+  : cycle_member_ptr(ptr)
+  {
+    ptr.reset();
+  }
+
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(const cycle_member_ptr<U>& ptr)
   : target_(ptr.target_)
