@@ -10,6 +10,9 @@
 namespace cycle_ptr {
 
 
+struct unowned_cycle_t {};
+inline constexpr auto unowned_cycle = unowned_cycle_t();
+
 /**
  * \brief Adaptor for collections with member types.
  * \details Member types are owned by the owner supplied at allocator construction.
@@ -43,6 +46,12 @@ class cycle_allocator
   explicit cycle_allocator(const cycle_base& base, Args&&... args)
   : Nested(std::forward<Args>(args)...),
     control_(base.control_)
+  {}
+
+  template<typename... Args, typename = std::enable_if_t<std::is_constructible_v<Nested, Args...>>>
+  explicit cycle_allocator([[maybe_unused]] unowned_cycle_t unowned_tag, Args&&... args)
+  : Nested(std::forward<Args>(args)...),
+    control_(detail::base_control::unowned_control())
   {}
 
   /**

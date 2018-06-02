@@ -63,7 +63,7 @@ class control final
   noexcept
   -> void {
     assert(bc != nullptr);
-#ifndef NDEBUG
+#ifdef NDEBUG
     control* ptr = static_cast<control*>(bc);
 #else
     control* ptr = dynamic_cast<control*>(bc);

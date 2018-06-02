@@ -2,6 +2,44 @@
 #include <cycle_ptr/detail/generation.h>
 
 namespace cycle_ptr::detail {
+namespace {
+
+
+class unowned_control_impl final
+: public base_control
+{
+ public:
+  auto clear_data_()
+  noexcept
+  -> void override {
+    // We never leave the under_construction stage,
+    // so we should never be asked to delete our pointee.
+    assert(false);
+  }
+
+  auto get_deleter_() const
+  noexcept
+  -> void (*)(base_control* bc) noexcept override {
+    return &deleter_impl_;
+  }
+
+  static auto deleter_impl_(base_control* bc)
+  noexcept
+  -> void {
+    assert(bc != nullptr);
+#ifdef NDEBUG
+    unowned_control_impl* ptr = static_cast<unowned_control_impl*>(bc);
+#else
+    unowned_control_impl* ptr = dynamic_cast<unowned_control_impl*>(bc);
+    assert(ptr != nullptr);
+#endif
+
+    delete ptr;
+  }
+};
+
+
+} /* namespace cycle_ptr::detail::<unnamed> */
 
 
 base_control::base_control() {
@@ -28,6 +66,11 @@ base_control::~base_control() noexcept {
   std::lock_guard<std::mutex> edge_lck{ mtx_ };
   assert(edges_.empty());
 #endif
+}
+
+auto base_control::unowned_control()
+-> intrusive_ptr<base_control> {
+  return intrusive_ptr<base_control>(new unowned_control_impl(), false);
 }
 
 auto base_control::weak_acquire()

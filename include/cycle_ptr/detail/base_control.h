@@ -59,6 +59,9 @@ class base_control
   virtual ~base_control() noexcept;
 
  public:
+  ///\brief Create a control block that represents no ownership.
+  static auto unowned_control() -> intrusive_ptr<base_control>;
+
   ///\brief Test if the object managed by this control is expired.
   auto expired() const
   noexcept
