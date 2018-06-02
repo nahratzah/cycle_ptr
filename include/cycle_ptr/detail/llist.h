@@ -581,8 +581,8 @@ noexcept
   other_last->succ_ = my_succ;
   other_first->pred_ = my_pred;
 
-  other_succ->succ_ = other_pred;
-  other_pred->pred_ = other_succ;
+  other_succ->pred_ = other_pred;
+  other_pred->succ_ = other_succ;
 }
 
 
