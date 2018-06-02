@@ -117,11 +117,8 @@ auto vertex::reset(
 
   // Assert what's been acquired so far.
   // If these fail, code above may have corrupted state already.
-  assert(src_merge_lck.owns_lock() || src_unique_merge_lck.owns_lock());
-  assert(!src_merge_lck.owns_lock()
-      || src_merge_lck.mutex() == &src_gen->merge_mtx_);
-  assert(!src_unique_merge_lck.owns_lock()
-      || src_unique_merge_lck.mutex() == &src_gen->merge_mtx_);
+  assert(src_merge_lck.owns_lock()
+      && src_merge_lck.mutex() == &src_gen->merge_mtx_);
   assert(src_gen == bc_->generation_);
 
   // Clear old dst and replace with new dst.
