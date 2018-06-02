@@ -262,7 +262,7 @@ noexcept
       // We don't need to lock dst->generation_, since it's this generation
       // which is already protected.
       // (When it isn't this generation, we don't process the edge.)
-      if (dst->generation_ != this)
+      if (dst == nullptr || dst->generation_ != this)
         continue;
 
       // dst color meaning:
@@ -489,7 +489,8 @@ noexcept
 
       // Update reference counters.
       // (This predicate is why stage 2 must happen after stage 1.)
-      if (edge_dst->generation_ == dst) edge_dst->release(true);
+      if (edge_dst != nullptr && edge_dst->generation_ == dst)
+        edge_dst->release(true);
     }
   }
   // Stage 2: switch generation pointers.
