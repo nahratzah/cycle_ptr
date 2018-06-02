@@ -310,9 +310,9 @@ noexcept
 auto generation::gc_phase2_sweep_(controls_list::iterator wavefront_end)
 noexcept
 -> controls_list::iterator {
-  controls_list::iterator wavefront_begin = controls_.begin();
-
-  while (wavefront_begin != wavefront_end) {
+  for (controls_list::iterator wavefront_begin = controls_.begin();
+      wavefront_begin != wavefront_end;
+      ++wavefront_begin) {
     base_control& bc = *wavefront_begin;
 
     // Change bc colour to white.
