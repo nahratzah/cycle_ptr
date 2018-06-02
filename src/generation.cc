@@ -175,7 +175,7 @@ noexcept
   controls_list::iterator i = controls_.begin();
   while (i != controls_.end()) {
     std::uintptr_t expect = make_refcounter(0u, color::white);
-    while (get_color(expect) != color::red) {
+    for (;;) {
       assert(get_color(expect) != color::black);
       const color target_color = (get_refs(expect) == 0u ? color::red : color::grey);
       if (i->store_refs_.compare_exchange_weak(
@@ -191,6 +191,9 @@ noexcept
         } else {
           controls_.splice(wavefront_end, controls_, i++);
         }
+        break;
+      } else if (get_color(expect) == color::red) {
+        ++i;
         break;
       }
     }
