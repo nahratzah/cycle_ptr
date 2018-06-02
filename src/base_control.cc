@@ -9,6 +9,10 @@ class unowned_control_impl final
 : public base_control
 {
  public:
+  unowned_control_impl()
+  : base_control(generation_singleton_())
+  {}
+
   auto clear_data_()
   noexcept
   -> void override {
@@ -23,6 +27,7 @@ class unowned_control_impl final
     return &deleter_impl_;
   }
 
+ private:
   static auto deleter_impl_(base_control* bc)
   noexcept
   -> void {
@@ -36,14 +41,24 @@ class unowned_control_impl final
 
     delete ptr;
   }
+
+  static auto generation_singleton_()
+  -> intrusive_ptr<generation> {
+    static const intrusive_ptr<generation> impl = generation::new_generation(0);
+    return impl;
+  }
 };
 
 
 } /* namespace cycle_ptr::detail::<unnamed> */
 
 
-base_control::base_control() {
-  auto g = generation::new_generation();
+base_control::base_control()
+: base_control(generation::new_generation())
+{}
+
+base_control::base_control(intrusive_ptr<generation> g) noexcept {
+  assert(g != nullptr);
   g->link(*this);
   generation_.reset(std::move(g));
 }

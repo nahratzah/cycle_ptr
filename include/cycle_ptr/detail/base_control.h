@@ -56,6 +56,7 @@ class base_control
   class publisher;
 
   base_control();
+  base_control(intrusive_ptr<generation> g) noexcept;
   virtual ~base_control() noexcept;
 
  public:

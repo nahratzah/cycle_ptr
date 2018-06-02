@@ -39,6 +39,10 @@ class generation {
 
   generation() = default;
 
+  generation(std::uintmax_t seq)
+  : seq(seq)
+  {}
+
   generation(const generation&) = delete;
 
 #ifndef NDEBUG
@@ -54,6 +58,11 @@ class generation {
   static auto new_generation()
   -> intrusive_ptr<generation> {
     return intrusive_ptr<generation>(new generation(), true);
+  }
+
+  static auto new_generation(std::uintmax_t seq)
+  -> intrusive_ptr<generation> {
+    return intrusive_ptr<generation>(new generation(seq), true);
   }
 
   static auto order_invariant(const generation& origin, const generation& dest)
@@ -79,7 +88,9 @@ class generation {
   noexcept
   -> std::uintmax_t {
     // Sequence number generation.
-    static std::atomic<std::uintmax_t> state{ 0u };
+    // We start at number 1, so the 'unowned' generation can share seq 0
+    // without ever getting merged.
+    static std::atomic<std::uintmax_t> state{ 1u };
     const std::uintmax_t result = state.fetch_add(1u, std::memory_order_relaxed);
 
     // uintmax_t will be at least 64 bit.
