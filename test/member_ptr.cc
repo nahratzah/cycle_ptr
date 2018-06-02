@@ -60,6 +60,17 @@ TEST(assignment) {
   CHECK(target_destroyed);
 }
 
+TEST(null_pointee) {
+  bool owner_destroyed = false;
+  cycle_gptr<owner> ptr_1 = make_cycle<owner>(&owner_destroyed);
+
+  REQUIRE CHECK(ptr_1->target == nullptr);
+  CHECK(!owner_destroyed);
+
+  ptr_1 = nullptr;
+  CHECK(owner_destroyed);
+}
+
 TEST(self_reference) {
   bool destroyed = false;
   cycle_gptr<owner> ptr = make_cycle<owner>(&destroyed);
