@@ -178,7 +178,7 @@ class base_control::publisher {
     auto operator<(const address_range& other) const
     noexcept
     -> bool {
-      return std::tie(addr, len) < std::tie(other.addr, other.len);
+      return addr < other.addr;
     }
   };
 
