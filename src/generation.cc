@@ -1,4 +1,55 @@
 #include <cycle_ptr/detail/generation.h>
+#include <cycle_ptr/util.h>
+
+namespace cycle_ptr {
+namespace {
+
+
+struct delay_gc_impl_ {
+  std::shared_mutex mtx;
+  delay_gc fn;
+
+  static auto singleton()
+  -> delay_gc_impl_& {
+    delay_gc_impl_ impl;
+    return impl;
+  }
+};
+
+
+auto maybe_delay_gc_(detail::generation& g)
+-> bool {
+  try {
+    delay_gc_impl_& impl = delay_gc_impl_::singleton();
+    std::shared_lock<std::shared_mutex> lck{ impl.mtx };
+    if (impl.fn == nullptr) return false;
+    impl.fn(gc_operation(detail::intrusive_ptr<detail::generation>(&g, true)));
+    return true;
+  } catch (...) {
+    return false;
+  }
+}
+
+
+} /* namespace cycle_ptr::<unnamed> */
+
+
+auto get_delay_gc()
+-> delay_gc {
+  delay_gc_impl_& impl = delay_gc_impl_::singleton();
+  std::shared_lock<std::shared_mutex> lck{ impl.mtx };
+  return impl.fn;
+}
+
+auto set_delay_gc(delay_gc f)
+-> delay_gc {
+  delay_gc_impl_& impl = delay_gc_impl_::singleton();
+  std::lock_guard<std::shared_mutex> lck{ impl.mtx };
+  return std::exchange(impl.fn, std::move(f));
+}
+
+
+} /* namespace cycle_ptr */
 
 namespace cycle_ptr::detail {
 
@@ -6,8 +57,9 @@ namespace cycle_ptr::detail {
 auto generation::gc()
 noexcept
 -> void {
-  if (!gc_flag_.test_and_set(std::memory_order_release))
-    gc_();
+  if (!gc_flag_.test_and_set(std::memory_order_release)) {
+    if (!maybe_delay_gc_(*this)) gc_();
+  }
 }
 
 auto generation::fix_ordering(base_control& src, base_control& dst)

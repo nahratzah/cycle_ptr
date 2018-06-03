@@ -9,10 +9,16 @@
 #include <cycle_ptr/detail/base_control.h>
 #include <cycle_ptr/detail/intrusive_ptr.h>
 
+namespace cycle_ptr {
+class gc_operation;
+} /* namespace cycle_ptr */
+
 namespace cycle_ptr::detail {
 
 
 class generation {
+  friend class cycle_ptr::gc_operation;
+
   friend auto intrusive_ptr_add_ref(generation* g)
   noexcept
   -> void {
