@@ -23,28 +23,75 @@ template<typename> class cycle_allocator;
 template<typename T, typename Alloc, typename... Args>
 auto allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<T>;
 
+/**
+ * \brief An optional base for classes which need to supply ownership to cycle_member_ptr.
+ * \details
+ * The cycle_base keeps track of the control block of the object participating
+ * in the cycle_ptr graph, as well as providing a *shared from this* utility.
+ *
+ * You are not required to inherit from cycle_base, for the cycle_ptr graph to
+ * function correctly.
+ */
 class cycle_base {
   template<typename> friend class cycle_member_ptr;
   template<typename> friend class cycle_allocator;
 
  protected:
+  /**
+   * \brief Default constructor acquires its control block from context.
+   * \details
+   * Uses publisher logic to look up the control block for its range.
+   * Those ranges are published by cycle_allocator, make_cycle, and allocate_cycle.
+   *
+   * \throws std::runtime_error if no range was published.
+   */
   cycle_base()
   : control_(detail::base_control::publisher_lookup(this, sizeof(*this)))
   {}
 
+  /**
+   * \brief Copy constructor.
+   * \details
+   * Provided so that you don't lose the default copy constructor semantics,
+   * but keep in mind that this constructor simply invokes the default constructor.
+   *
+   * \note A copy has a different, automatically deduced, control block.
+   *
+   * \throws std::runtime_error if no range was published.
+   */
   cycle_base(const cycle_base&)
   noexcept
   : cycle_base()
   {}
 
+  /**
+   * \brief Copy assignment.
+   * \details
+   * A noop, provided so you don't lose default assignment in derived classes.
+   */
   auto operator=(const cycle_base&)
   noexcept
   -> cycle_base& {
     return *this;
   }
 
+  ///\brief Default destructor.
   ~cycle_base() noexcept = default;
 
+  /**
+   * \brief Create a cycle_gptr (equivalent of std::shared_ptr) from this.
+   * \details
+   * The returned smart pointer uses the control block of this.
+   *
+   * Instead of using ``this->shared_from_this(this)``, you could use this
+   * to create pointers directly from member variables, by invocing
+   * ``this->shared_from_this(&this->member_variable)``.
+   *
+   * \throws std::bad_weak_ptr If the smart pointer can not be created.
+   * This occurs when invoked during constructor of derived type, or during its destruction.
+   * Note that if unowned_cycle is used to construct the base, this method will
+   * always throw ``std::bad_weak_ptr``.
+   */
   template<typename T>
   auto shared_from_this(T* this_ptr)
   -> cycle_gptr<T> {
@@ -64,9 +111,19 @@ class cycle_base {
   }
 
  private:
+  ///\brief Pointer to control block.
   const detail::intrusive_ptr<detail::base_control> control_;
 };
 
+/**
+ * \brief Pointer between objects participating in the cycle_ptr graph.
+ * \details
+ * This smart pointer models the relationship between an origin object
+ * and a target object.
+ *
+ * It is intended for use in member variables, as well as collections
+ * that are owned by a member variable.
+ */
 template<typename T>
 class cycle_member_ptr
 : private detail::vertex
@@ -339,6 +396,17 @@ class cycle_member_ptr
   T* target_ = nullptr;
 };
 
+/**
+ * \brief Global (or automatic) scope smart pointer.
+ * \details
+ * This smart pointer models a reference to a target object,
+ * from a globally reachable place, such as a function variable.
+ *
+ * Use this pointer in function arguments/body, global scope, or objects not
+ * participating in the cycle_ptr graph.
+ *
+ * It is smaller and faster than cycle_member_ptr.
+ */
 template<typename T>
 class cycle_gptr {
   template<typename> friend class cycle_member_ptr;
@@ -1211,6 +1279,13 @@ auto exchange(cycle_ptr::cycle_member_ptr<T>& x, U&& y) {
   return result;
 }
 
+/**
+ * \brief Hash code implementation for cycle pointers.
+ * \details
+ * Implements hash code for both cycle_ptr::cycle_member_ptr and cycle_ptr::cycle_gptr,
+ * as the two are semantically equivalent.
+ * \tparam T The cycle pointer template argument.
+ */
 template<typename T>
 struct hash<cycle_ptr::cycle_member_ptr<T>> {
   [[deprecated]]
@@ -1218,29 +1293,44 @@ struct hash<cycle_ptr::cycle_member_ptr<T>> {
   [[deprecated]]
   typedef std::size_t result_type;
 
+  ///\brief Compute the hashcode of a cycle pointer.
+  ///\details
+  ///If cycle_member_ptr and cycle_gptr point at the
+  ///same object, their hash codes shall be the same.
+  ///\param p The cycle pointer for which to compute the hash code.
+  ///\returns Hashcode of ``p.get()``.
   auto operator()(const cycle_ptr::cycle_member_ptr<T>& p) const
   noexcept
   -> std::size_t {
     return std::hash<typename cycle_ptr::cycle_member_ptr<T>::element_type*>()(p.get());
   }
+
+  ///\brief Compute the hashcode of a cycle pointer.
+  ///\details
+  ///If cycle_member_ptr and cycle_gptr point at the
+  ///same object, their hash codes shall be the same.
+  ///\param p The cycle pointer for which to compute the hash code.
+  ///\returns Hashcode of ``p.get()``.
+  auto operator()(const cycle_ptr::cycle_gptr<T>& p) const
+  noexcept
+  -> std::size_t {
+    return std::hash<typename cycle_ptr::cycle_gptr<T>::element_type*>()(p.get());
+  }
 };
 
+/**
+ * \brief Hash code implementation for cycle pointers.
+ * \details
+ * Implements hash code for both cycle_ptr::cycle_member_ptr and cycle_ptr::cycle_gptr,
+ * as the two are semantically equivalent.
+ * \tparam T The cycle pointer template argument.
+ */
 template<typename T>
 struct hash<cycle_ptr::cycle_gptr<T>>
 : hash<cycle_ptr::cycle_member_ptr<T>>
 {
   [[deprecated]]
   typedef cycle_ptr::cycle_gptr<T> argument_type;
-  [[deprecated]]
-  typedef std::size_t result_type;
-
-  using hash<cycle_ptr::cycle_member_ptr<T>>::operator();
-
-  auto operator()(const cycle_ptr::cycle_gptr<T>& p) const
-  noexcept
-  -> std::size_t {
-    return std::hash<typename cycle_ptr::cycle_gptr<T>::element_type*>()(p.get());
-  }
 };
 
 
