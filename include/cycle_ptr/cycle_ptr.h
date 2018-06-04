@@ -1856,6 +1856,8 @@ class cycle_weak_ptr {
 };
 
 
+///\brief Equality comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator==(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1863,6 +1865,8 @@ noexcept
   return x.get() == y.get();
 }
 
+///\brief Equality comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator==(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1870,6 +1874,8 @@ noexcept
   return !x;
 }
 
+///\brief Equality comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1877,6 +1883,8 @@ noexcept
   return !y;
 }
 
+///\brief Inequality comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator!=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1884,6 +1892,8 @@ noexcept
   return !(x == y);
 }
 
+///\brief Inequality comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator!=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1891,6 +1901,8 @@ noexcept
   return bool(x);
 }
 
+///\brief Inequality comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1898,6 +1910,8 @@ noexcept
   return bool(y);
 }
 
+///\brief Less comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1905,6 +1919,8 @@ noexcept
   return x.get() < y.get();
 }
 
+///\brief Less comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator<(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1912,6 +1928,8 @@ noexcept
   return std::less<typename cycle_member_ptr<T>::element_type*>()(x.get(), nullptr);
 }
 
+///\brief Less comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1919,6 +1937,8 @@ noexcept
   return std::less<typename cycle_member_ptr<U>::element_type*>()(nullptr, y.get());
 }
 
+///\brief Greater comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1926,6 +1946,8 @@ noexcept
   return y < x;
 }
 
+///\brief Greater comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator>(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1933,6 +1955,8 @@ noexcept
   return nullptr < x;
 }
 
+///\brief Greater comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1940,6 +1964,8 @@ noexcept
   return y < nullptr;
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1947,6 +1973,8 @@ noexcept
   return !(y < x);
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator<=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1954,6 +1982,8 @@ noexcept
   return !(nullptr < x);
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1961,6 +1991,8 @@ noexcept
   return !(y < nullptr);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>=(const cycle_member_ptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1968,6 +2000,8 @@ noexcept
   return !(x < y);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto operator>=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -1975,6 +2009,8 @@ noexcept
   return !(x < nullptr);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_member_ptr
 template<typename U>
 inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
 noexcept
@@ -1982,6 +2018,8 @@ noexcept
   return !(nullptr < y);
 }
 
+///\brief Swap two pointers.
+///\relates cycle_member_ptr
 template<typename T>
 inline auto swap(cycle_member_ptr<T>& x, cycle_member_ptr<T>& y)
 noexcept
@@ -1989,6 +2027,9 @@ noexcept
   x.swap(y);
 }
 
+///\brief Swap two pointers.
+///\relates cycle_member_ptr
+///\relates cycle_gptr
 template<typename T>
 inline auto swap(cycle_member_ptr<T>& x, cycle_gptr<T>& y)
 noexcept
@@ -1997,6 +2038,8 @@ noexcept
 }
 
 
+///\brief Equality comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator==(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2004,6 +2047,8 @@ noexcept
   return x.get() == y.get();
 }
 
+///\brief Equality comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator==(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2011,6 +2056,8 @@ noexcept
   return !x;
 }
 
+///\brief Equality comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2018,6 +2065,8 @@ noexcept
   return !y;
 }
 
+///\brief Inequality comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator!=(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2025,6 +2074,8 @@ noexcept
   return !(x == y);
 }
 
+///\brief Inequality comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator!=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2032,6 +2083,8 @@ noexcept
   return bool(x);
 }
 
+///\brief Inequality comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2039,6 +2092,8 @@ noexcept
   return bool(y);
 }
 
+///\brief Less comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator<(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2046,6 +2101,8 @@ noexcept
   return x.get() < y.get();
 }
 
+///\brief Less comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator<(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2053,6 +2110,8 @@ noexcept
   return std::less<typename cycle_gptr<T>::element_type*>()(x.get(), nullptr);
 }
 
+///\brief Less comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2060,6 +2119,8 @@ noexcept
   return std::less<typename cycle_gptr<U>::element_type*>()(nullptr, y.get());
 }
 
+///\brief Greater comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator>(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2067,6 +2128,8 @@ noexcept
   return y < x;
 }
 
+///\brief Greater comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator>(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2074,6 +2137,8 @@ noexcept
   return nullptr < x;
 }
 
+///\brief Greater comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2081,6 +2146,8 @@ noexcept
   return y < nullptr;
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator<=(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2088,6 +2155,8 @@ noexcept
   return !(y < x);
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator<=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2095,6 +2164,8 @@ noexcept
   return !(nullptr < x);
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2102,6 +2173,8 @@ noexcept
   return !(y < nullptr);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_gptr
 template<typename T, typename U>
 inline auto operator>=(const cycle_gptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2109,6 +2182,8 @@ noexcept
   return !(x < y);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_gptr
 template<typename T>
 inline auto operator>=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
 noexcept
@@ -2116,6 +2191,8 @@ noexcept
   return !(x < nullptr);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_gptr
 template<typename U>
 inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
 noexcept
@@ -2123,6 +2200,8 @@ noexcept
   return !(nullptr < y);
 }
 
+///\brief Swap two pointers.
+///\relates cycle_gptr
 template<typename T>
 inline auto swap(cycle_gptr<T>& x, cycle_gptr<T>& y)
 noexcept
@@ -2130,6 +2209,9 @@ noexcept
   x.swap(y);
 }
 
+///\brief Swap two pointers.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T>
 inline auto swap(cycle_gptr<T>& x, cycle_member_ptr<T>& y)
 noexcept
@@ -2138,6 +2220,8 @@ noexcept
 }
 
 
+///\brief Swap two pointers.
+///\relates cycle_weak_ptr
 template<typename T>
 inline auto swap(cycle_weak_ptr<T>& x, cycle_weak_ptr<T>& y)
 noexcept
@@ -2146,6 +2230,9 @@ noexcept
 }
 
 
+///\brief Equality comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator==(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2153,6 +2240,9 @@ noexcept
   return x.get() == y.get();
 }
 
+///\brief Equality comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator==(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2160,6 +2250,9 @@ noexcept
   return x.get() == y.get();
 }
 
+///\brief Inequality comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator!=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2167,6 +2260,9 @@ noexcept
   return !(x == y);
 }
 
+///\brief Inequality comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator!=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2174,6 +2270,9 @@ noexcept
   return !(x == y);
 }
 
+///\brief Less comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2181,6 +2280,9 @@ noexcept
   return x.get() < y.get();
 }
 
+///\brief Less comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2188,6 +2290,9 @@ noexcept
   return x.get() < y.get();
 }
 
+///\brief Greater comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2195,6 +2300,9 @@ noexcept
   return y < x;
 }
 
+///\brief Greater comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2202,6 +2310,9 @@ noexcept
   return y < x;
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2209,6 +2320,9 @@ noexcept
   return !(y < x);
 }
 
+///\brief Less or equal comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator<=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
@@ -2216,6 +2330,9 @@ noexcept
   return !(y < x);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>=(const cycle_gptr<T>& x, const cycle_member_ptr<U>& y)
 noexcept
@@ -2223,6 +2340,9 @@ noexcept
   return !(x < y);
 }
 
+///\brief Greater or equal comparison.
+///\relates cycle_gptr
+///\relates cycle_member_ptr
 template<typename T, typename U>
 inline auto operator>=(const cycle_member_ptr<T>& x, const cycle_gptr<U>& y)
 noexcept
