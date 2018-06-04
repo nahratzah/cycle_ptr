@@ -10,9 +10,6 @@
 namespace cycle_ptr {
 
 
-struct unowned_cycle_t {};
-inline constexpr auto unowned_cycle = unowned_cycle_t();
-
 /**
  * \brief Adaptor for collections with member types.
  * \details Member types are owned by the owner supplied at allocator construction.

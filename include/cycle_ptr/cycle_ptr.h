@@ -15,6 +15,20 @@
 namespace cycle_ptr {
 
 
+/**
+ * \brief Tag indicating an edge without owner.
+ * \details
+ * Used by cycle_allocator and cycle_member_ptr instances, where there is no
+ * origin object participating in the cycle_ptr graph.
+ */
+struct unowned_cycle_t {};
+
+/**
+ * \brief Tag indicating an edge without an owner.
+ * \relates unowned_cycle_t
+ */
+inline constexpr auto unowned_cycle = unowned_cycle_t();
+
 template<typename> class cycle_member_ptr;
 template<typename> class cycle_gptr;
 template<typename> class cycle_weak_ptr;
