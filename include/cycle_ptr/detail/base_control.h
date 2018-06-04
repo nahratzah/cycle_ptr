@@ -22,6 +22,11 @@ template<typename> class cycle_allocator;
 namespace cycle_ptr::detail {
 
 
+/**
+ * \brief Base class for all control blocks.
+ * \details
+ * Contains all variables required for the algorithm to function.
+ */
 class base_control
 : public link<base_control>
 {
@@ -29,6 +34,8 @@ class base_control
   friend class vertex;
   template<typename> friend class cycle_ptr::cycle_allocator;
 
+  ///\brief Increment reference counter.
+  ///\details Used by intrusive_ptr.
   friend auto intrusive_ptr_add_ref(base_control* bc)
   noexcept
   -> void {
@@ -39,6 +46,9 @@ class base_control
     assert(old > 0u && old < UINTPTR_MAX);
   }
 
+  ///\brief Decrement reference counter.
+  ///\details Used by intrusive_ptr.
+  ///Destroys this if the last reference goes away.
   friend auto intrusive_ptr_release(base_control* bc)
   noexcept
   -> void {
@@ -55,9 +65,12 @@ class base_control
  protected:
   class publisher;
 
+  ///\brief Default constructor allocates a new generation.
   base_control();
+  ///\brief Constructor to use a specific generation.
   base_control(intrusive_ptr<generation> g) noexcept;
-  virtual ~base_control() noexcept;
+  ///\brief Destructor.
+  ~base_control() noexcept;
 
  public:
   ///\brief Create a control block that represents no ownership.
@@ -70,6 +83,7 @@ class base_control
     return get_color(store_refs_.load(std::memory_order_relaxed)) == color::black;
   }
 
+  ///\brief Implements publisher lookup based on address range.
   static auto publisher_lookup(void* addr, std::size_t len) -> intrusive_ptr<base_control>;
 
   ///\brief Used by weak to strong reference promotion.
@@ -128,6 +142,7 @@ class base_control
    */
   auto gc() noexcept -> void;
 
+  ///\brief Register a vertex.
   auto push_back(vertex& v)
   noexcept
   -> void {
@@ -135,6 +150,7 @@ class base_control
     edges_.push_back(v);
   }
 
+  ///\brief Deregister a vertex.
   auto erase(vertex& v)
   noexcept
   -> void {
@@ -143,38 +159,80 @@ class base_control
   }
 
  private:
+  ///\brief Destroy object managed by this control block.
   virtual auto clear_data_() noexcept -> void = 0;
+  /**
+   * \brief Retrieve the deleter function.
+   * \details
+   * Deleter is a free function, because control blocks need to use their
+   * construction allocator to erase.
+   */
   virtual auto get_deleter_() const noexcept -> void (*)(base_control*) noexcept = 0;
 
+  ///\brief Reference counter on managed object.
+  ///\details Initially has a value of 1.
   std::atomic<std::uintptr_t> store_refs_{ make_refcounter(1u, color::white) };
+  ///\brief Reference counter on control block.
+  ///\details Initially has a value of 1.
   std::atomic<std::uintptr_t> control_refs_{ std::uintptr_t(1) };
+  ///\brief Pointer to generation.
   hazard_ptr<generation> generation_;
-  std::mutex mtx_; // Protects edges_.
+  ///\brief Mutex to protect edges.
+  std::mutex mtx_;
+  ///\brief List of edges originating from object managed by this control block.
   llist<vertex, vertex> edges_;
 
  public:
+  /**
+   * \brief This variable indicates the managed object is under construction.
+   * \details
+   * It is used to prevent \ref base_control::shared_from_this from
+   * handing out references until construction has completed.
+   *
+   * If a pointer was handed out before, we would get into a difficult scenario
+   * where the constructor of an object could publish itself and then fail
+   * its construction later.
+   * At which point we would have the difficult question of how to manage
+   * a dangling pointer.
+   *
+   * By preventing this, we prevent failed constructors from accidentally
+   * publishing an uninitialized pointer.
+   */
   bool under_construction = true;
 };
 
 
+/**
+ * \brief Address range publisher.
+ * \details
+ * Publishes that a range of memory is managed by a specific control block,
+ * so that \ref base_control and \ref cycle_member_ptr can use automatic
+ * deduction of ownership.
+ */
 class base_control::publisher {
  private:
+  ///\brief Address range.
   struct address_range {
+    ///\brief Base memory address.
     void* addr;
+    ///\brief Size of memory in bytes.
     std::size_t len;
 
+    ///\brief Equality comparison.
     auto operator==(const address_range& other) const
     noexcept
     -> bool {
       return std::tie(addr, len) == std::tie(other.addr, other.len);
     }
 
+    ///\brief Inequality comparison.
     auto operator!=(const address_range& other) const
     noexcept
     -> bool {
       return !(*this == other);
     }
 
+    ///\brief Less operator for use in map.
     auto operator<(const address_range& other) const
     noexcept
     -> bool {
@@ -189,6 +247,16 @@ class base_control::publisher {
    *
    * It must be an ordered map, since the lookup queries will likely contain
    * sub-ranges.
+   *
+   * \note
+   * We use a global map for published memory ranges, rather than a TLS variable.
+   * \par
+   * This is because a TLS variable would break, if the called constructor,
+   * during our publishing stage, would jump threads.
+   * This is very possible to happen both with boost::asio and the upcoming
+   * co-routine additions in C++20.
+   * For example, if a co-routine creates an object, which during its
+   * construction invokes an awaitable function.
    */
   using map_type = std::map<address_range, base_control*>;
 
@@ -225,6 +293,7 @@ class base_control::publisher {
   static auto singleton_map_() noexcept
   -> std::tuple<std::shared_mutex&, map_type&>;
 
+  ///\brief Iterator into published data.
   map_type::const_iterator iter_;
 };
 
