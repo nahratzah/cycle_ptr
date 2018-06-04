@@ -60,6 +60,10 @@ The equivalent code in this library would be:
       // A and B are now unreachable, so cycle_ptr cleans them up properly.
     }
 
+## Reference
+
+Doxygen output is [viewable online](https://www.stack.nl/~ariane/cycle_ptr/).
+
 ## Overview
 
 This library contains three pointers, which form the core of its interface.
