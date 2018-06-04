@@ -64,6 +64,15 @@ class cycle_base {
   {}
 
   /**
+   * \brief Specialized constructor that signifies ``*this`` will not be pointed at by a cycle_ptr.
+   * \throws std::bad_alloc If there is not enough memory to create
+   * the required control block.
+   */
+  cycle_base([[maybe_unused]] unowned_cycle_t unowned_tag)
+  : control_(detail::base_control::unowned_control())
+  {}
+
+  /**
    * \brief Copy constructor.
    * \details
    * Provided so that you don't lose the default copy constructor semantics,
@@ -150,14 +159,394 @@ class cycle_member_ptr
   using element_type = std::remove_extent_t<T>;
   using weak_type = cycle_weak_ptr<T>;
 
+  /**
+   * \brief Create an unowned member pointer, representing a nullptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   */
+  explicit cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag) noexcept
+  : vertex(detail::base_control::unowned_control())
+  {}
+
+  /**
+   * \brief Create an unowned member pointer, representing a nullptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param nil Nullptr value.
+   */
+  cycle_member_ptr(unowned_cycle_t unowned_tag, [[maybe_unused]] std::nullptr_t nil) noexcept
+  : cycle_member_ptr(unowned_tag)
+  {}
+
+  /**
+   * \brief Create an unowned member pointer, pointing at \p ptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == ptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param ptr Initialize to point at this same object.
+   */
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_member_ptr<U>& ptr)
+  : detail::vertex(detail::base_control::unowned_control()),
+    target_(ptr.target_)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  /**
+   * \brief Create an unowned member pointer, pointing at \p ptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param ptr Initialize to point at this same object.
+   */
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(unowned_cycle_t unowned_tag, cycle_member_ptr<U>&& ptr)
+  : cycle_member_ptr(unowned_tag, ptr)
+  {
+    ptr.reset();
+  }
+
+  /**
+   * \brief Create an unowned member pointer, pointing at \p ptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == ptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param ptr Initialize to point at this same object.
+   */
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_gptr<U>& ptr)
+  : detail::vertex(detail::base_control::unowned_control()),
+    target_(ptr.target_)
+  {
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
+  }
+
+  /**
+   * \brief Create an unowned member pointer, pointing at \p ptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param ptr Initialize to point at this same object.
+   */
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, cycle_gptr<U>&& ptr)
+  : detail::vertex(detail::base_control::unowned_control()),
+    target_(std::exchange(ptr.target_, nullptr))
+  {
+    this->detail::vertex::reset(
+        std::move(ptr.target_ctrl_),
+        true, true);
+  }
+
+  /**
+   * \brief Aliasing constructor for unowned member pointer.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \throws std::bad_weak_ptr If ptr is owned by an expired owner.
+   *
+   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * constructed without \p ptr having ownership of anything, yet still
+   * pointing at \p target.
+   * This case is currently unspecified in cycle_ptr library.
+   */
+  template<typename U>
+  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_member_ptr<U>& ptr, element_type* target)
+  : detail::vertex(detail::base_control::unowned_control()),
+    target_(target)
+  {
+    ptr.throw_if_owner_expired();
+    this->detail::vertex::reset(ptr.get_control(), false, false);
+  }
+
+  /**
+   * \brief Aliasing constructor for unowned member pointer.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * constructed without \p ptr having ownership of anything, yet still
+   * pointing at \p target.
+   * This case is currently unspecified in cycle_ptr library.
+   */
+  template<typename U>
+  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_gptr<U>& ptr, element_type* target)
+  : detail::vertex(detail::base_control::unowned_control()),
+    target_(target)
+  {
+    this->detail::vertex::reset(ptr.target_ctrl_, false, true);
+  }
+
+  /**
+   * \brief Create an unowned member pointer, pointing at \p ptr.
+   * \details
+   * Makes this cycle_member_ptr behave like a cycle_gptr.
+   *
+   * Useful for instance when you need a cycle_member_ptr to pass as argument
+   * to a std::map::find() function, for instance:
+   * \code
+   * std::map<
+   *     cycle_member_ptr<Key>, Value,
+   *     std::less<cycle_member_ptr<Key>>,
+   *     cycle_allocator<std::allocator<std::pair<const cycle_member_ptr<Key>, Value>>>>
+   *     someMap;
+   * cycle_gptr<Key> soughtKey;
+   *
+   * // This will fail, as conversion from cycle_gptr to cycle_member_ptr
+   * // without declared ownership uses automatic ownership, but none is
+   * // published.
+   * // It will fail with std::runtime_error.
+   * someMap.find(soughtKey);
+   *
+   * // This will succeed, as conversion now explicitly declares
+   * // the argument to std::map::find() to have the correct type.
+   * someMap.find(cycle_member_ptr<Key>(unowned_cycle, soughtKey));
+   *
+   * // Braces initalization should also work:
+   * someMap.find({unowned_cycle, soughtKey});
+   * \endcode
+   *
+   * \post
+   * *this == ptr.lock()
+   *
+   * \param unowned_tag Tag to select ownerless construction.
+   * \param ptr Initialize to point at this same object.
+   * \throws std::bad_weak_ptr If the weak pointer is expired.
+   */
+  template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  cycle_member_ptr(unowned_cycle_t unowned_tag, const cycle_weak_ptr<U>& ptr)
+  : cycle_member_ptr(unowned_tag, cycle_gptr<U>(ptr))
+  {}
+
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \param owner The owner object of this member pointer.
+   */
   explicit cycle_member_ptr(cycle_base& owner) noexcept
   : vertex(owner.control_)
   {}
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \param owner The owner object of this member pointer.
+   */
   cycle_member_ptr(cycle_base& owner, [[maybe_unused]] std::nullptr_t nil) noexcept
   : cycle_member_ptr(owner)
   {}
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == ptr
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_member_ptr<U>& ptr)
   : detail::vertex(owner.control_),
@@ -167,6 +556,20 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, cycle_member_ptr<U>&& ptr)
   : cycle_member_ptr(owner, ptr)
@@ -174,6 +577,17 @@ class cycle_member_ptr
     ptr.reset();
   }
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == ptr
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_gptr<U>& ptr)
   : detail::vertex(owner.control_),
@@ -182,6 +596,20 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, cycle_gptr<U>&& ptr)
   : detail::vertex(owner.control_),
@@ -192,6 +620,25 @@ class cycle_member_ptr
         true, true);
   }
 
+  /**
+   * \brief Aliasing constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   *
+   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * constructed without \p ptr having ownership of anything, yet still
+   * pointing at \p target.
+   * This case is currently unspecified in cycle_ptr library.
+   */
   template<typename U>
   cycle_member_ptr(cycle_base& owner, const cycle_member_ptr<U>& ptr, element_type* target)
   : detail::vertex(owner.control_),
@@ -201,6 +648,25 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
+  /**
+   * \brief Aliasing constructor with explicitly specified ownership.
+   * \details
+   * Creates a pointer owned by this owner.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Pointer to initalize with.
+   *
+   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * constructed without \p ptr having ownership of anything, yet still
+   * pointing at \p target.
+   * This case is currently unspecified in cycle_ptr library.
+   */
   template<typename U>
   cycle_member_ptr(cycle_base& owner, const cycle_gptr<U>& ptr, element_type* target)
   : detail::vertex(owner.control_),
@@ -209,14 +675,79 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
+  /**
+   * \brief Constructor with explicitly specified ownership.
+   *
+   * \post
+   * *this == ptr.lock()
+   *
+   * \param owner The owner object of this member pointer.
+   * \param ptr Initialize to point at this same object.
+   * \throws std::bad_weak_ptr If the weak pointer is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_base& owner, const cycle_weak_ptr<U>& ptr)
   : cycle_member_ptr(owner, cycle_gptr<U>(ptr))
   {}
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   cycle_member_ptr() {}
+
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == nullptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   cycle_member_ptr([[maybe_unused]] std::nullptr_t nil) {}
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == ptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   cycle_member_ptr(const cycle_member_ptr& ptr)
   : target_(ptr.target_)
   {
@@ -224,12 +755,51 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   cycle_member_ptr(cycle_member_ptr&& ptr)
   : cycle_member_ptr(ptr)
   {
     ptr.reset();
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == ptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(const cycle_member_ptr<U>& ptr)
   : target_(ptr.target_)
@@ -238,6 +808,27 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_member_ptr<U>&& ptr)
   : cycle_member_ptr(ptr)
@@ -245,6 +836,24 @@ class cycle_member_ptr
     ptr.reset();
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == ptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(const cycle_gptr<U>& ptr)
   : target_(ptr.target_)
@@ -252,6 +861,27 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == original value of ptr
+   *
+   * \post
+   * ptr == nullptr
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_member_ptr(cycle_gptr<U>&& ptr)
   : target_(std::exchange(ptr.target_, nullptr))
@@ -261,6 +891,27 @@ class cycle_member_ptr
         true, true);
   }
 
+  /**
+   * \brief Aliasing constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U>
   cycle_member_ptr(const cycle_member_ptr<U>& ptr, element_type* target)
   : target_(target)
@@ -269,6 +920,27 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.get_control(), false, false);
   }
 
+  /**
+   * \brief Aliasing constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * control block of *this == control block of ptr
+   *
+   * \post
+   * this->get() == target
+   *
+   * \throws std::runtime_error If no published control block covers
+   * the address range of *this.
+   */
   template<typename U>
   cycle_member_ptr(const cycle_gptr<U>& ptr, element_type* target)
   : target_(target)
@@ -276,6 +948,24 @@ class cycle_member_ptr
     this->detail::vertex::reset(ptr.target_ctrl_, false, true);
   }
 
+  /**
+   * \brief Constructor with automatic ownership detection.
+   * \details
+   * Uses \ref cycle_ptr::detail::base_control::publisher "publisher" logic
+   * to figure out the ownership.
+   *
+   * \ref cycle_ptr::allocate_cycle,
+   * \ref cycle_ptr::make_cycle,
+   * and \ref cycle_ptr::cycle_allocator
+   * publish their control block, which is automatically picked up by this
+   * contructor.
+   *
+   * \post
+   * *this == ptr.lock()
+   *
+   * \param ptr Initialize to point at this same object.
+   * \throws std::bad_weak_ptr If the weak pointer is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_member_ptr(const cycle_weak_ptr<U>& ptr)
   : cycle_member_ptr(cycle_gptr<U>(ptr))
