@@ -46,7 +46,7 @@ class generation {
   generation() = default;
 
   generation(std::uintmax_t seq)
-  : seq(seq)
+  : seq_(seq)
   {}
 
   generation(const generation&) = delete;
@@ -74,7 +74,7 @@ class generation {
   static auto order_invariant(const generation& origin, const generation& dest)
   noexcept
   -> bool {
-    return origin.seq < dest.seq;
+    return origin.seq() < (dest.seq() & ~moveable_seq);
   }
 
   auto link(base_control& bc) noexcept
@@ -90,25 +90,53 @@ class generation {
   }
 
  private:
+  static constexpr std::uintmax_t moveable_seq = 0x1;
+
   static auto new_seq_()
   noexcept
   -> std::uintmax_t {
-    // Sequence number generation.
-    // We start at number 1, so the 'unowned' generation can share seq 0
-    // without ever getting merged.
-    static std::atomic<std::uintmax_t> state{ 1u };
-    const std::uintmax_t result = state.fetch_add(1u, std::memory_order_relaxed);
+    /*
+     * Sequence number generation.
+     * Special value 0 is reserved for the 'unowned' generation.
+     *
+     * We use the low bit to indicate if a generation can have its sequence
+     * number altered.
+     *
+     * Consequently, we start at number 2, so the 'unowned' generation can share seq 0
+     * without ever getting merged and we're not using the low bit.
+     * We also advance with a step size of 2, for this reason.
+     *
+     * By allowing the sequence number to be decremented, we can update
+     * sequence numbers for RAII style acquisition, instead of requiring
+     * potentially large number of merges.
+     * For RAII style acquisition, the pointers of an object are likely
+     * filled with values allocated earlier, thus with lower sequence numbers.
+     */
+    static std::atomic<std::uintmax_t> state{ 2u };
+    const std::uintmax_t result =
+        state.fetch_add(2u, std::memory_order_relaxed)
+        | moveable_seq;
 
     // uintmax_t will be at least 64 bit.
     // If allocating a new generation each nano second,
-    // we would run out of sequence numbers after ~584 years.
+    // we would run out of sequence numbers after ~292 years.
+    // (584 years if we didn't use a step size of 2.)
+    //
+    // Note that the algorithm still does the right thing when sequence numbers
+    // wrap around.
+    // But it could mean a giant performance penalty due to merging into
+    // surviving high-sequence generations.
     assert(result != UINTPTR_MAX); // We ran out of sequence numbers.
 
     return result;
   }
 
  public:
-  const std::uintmax_t seq = new_seq_();
+  auto seq() const
+  noexcept
+  -> std::uintmax_t {
+    return seq_.load(std::memory_order_relaxed);
+  }
 
   auto gc() noexcept -> void;
 
@@ -254,6 +282,8 @@ class generation {
   std::shared_mutex red_promotion_mtx_;
 
  private:
+  ///\brief Sequence number of this generation.
+  std::atomic<std::uintmax_t> seq_ = new_seq_();
   ///\brief Reference counter for intrusive_ptr.
   std::atomic<std::uintptr_t> refs_{ 0u };
   ///\brief Flag indicating a pending GC.

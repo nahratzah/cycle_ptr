@@ -71,11 +71,30 @@ noexcept
 
   std::shared_lock<std::shared_mutex> src_merge_lck{ src_gen->merge_mtx_ };
   for (;;) {
-    if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[unlikely]] {
+    if (src_gen != dst_gen) // Clear movable bit in dst_gen.
+      dst_gen->seq_.fetch_and(~moveable_seq, std::memory_order_relaxed);
+
+    if (src_gen == dst_gen
+        || order_invariant(*src_gen, *dst_gen)
+        || (src_gen->seq() & moveable_seq) == moveable_seq) [[unlikely]] {
       while (src_gen != src.generation_) [[unlikely]] {
         src_merge_lck.unlock();
         src_gen = src.generation_.load();
         src_merge_lck = std::shared_lock<std::shared_mutex>{ src_gen->merge_mtx_ };
+      }
+
+      // Maybe alter the sequence number.
+      if (src_gen != dst_gen && !order_invariant(*src_gen, *dst_gen)) {
+        std::uintmax_t src_gen_seq = src_gen->seq_.load(std::memory_order_relaxed);
+        const std::uintmax_t dst_gen_seq = dst_gen->seq();
+        while ((src_gen_seq & moveable_seq) == moveable_seq && dst_gen_seq > 0u) {
+          if (src_gen->seq_.compare_exchange_weak(
+                  src_gen_seq,
+                  dst_gen_seq - 1u,
+                  std::memory_order_relaxed,
+                  std::memory_order_relaxed))
+            break;
+        }
       }
 
       if (src_gen == dst_gen || order_invariant(*src_gen, *dst_gen)) [[likely]] {
@@ -85,7 +104,7 @@ noexcept
     src_merge_lck.unlock();
 
     bool src_gc_requested = false;
-    if (src_gen->seq == dst_gen->seq && dst_gen > src_gen) {
+    if (src_gen->seq() == dst_gen->seq() && dst_gen > src_gen) {
       dst_gen.swap(src_gen);
       std::swap(src_gc_requested, dst_gc_requested);
     }
@@ -430,7 +449,7 @@ noexcept
   // Arguments assertion.
   assert(src != dst && src != nullptr && dst != nullptr);
   assert(order_invariant(*src, *dst)
-      || (src->seq == dst->seq && src < dst));
+      || (src->seq() == dst->seq() && src < dst));
 
   // Convenience of GC promise booleans.
   bool src_gc_requested = std::get<1>(src_tpl);
@@ -494,7 +513,7 @@ noexcept
   // Validate ordering.
   assert(src != dst && src != nullptr && dst != nullptr);
   assert(order_invariant(*src, *dst)
-      || (src->seq == dst->seq && src < dst));
+      || (src->seq() == dst->seq() && src < dst));
   assert(x_mtx_lck.owns_lock() && x_mtx_lck.mutex() == &src->mtx_);
   assert(x_merge_mtx_lck.owns_lock() && x_merge_mtx_lck.mutex() == &src->merge_mtx_);
 
