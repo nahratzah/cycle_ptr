@@ -116,7 +116,7 @@ class cycle_allocator
     }
 
     return control_ == other.control_
-        || (control_->is_unowned() && other.control_->is_unowned();
+        || (control_->is_unowned() && other.control_->is_unowned());
   }
 
   ///\brief Inequality comparison.
