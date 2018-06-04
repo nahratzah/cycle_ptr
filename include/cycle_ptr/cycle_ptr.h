@@ -156,7 +156,9 @@ class cycle_member_ptr
   template<typename> friend class cycle_weak_ptr;
 
  public:
+  ///\brief Element type of this pointer.
   using element_type = std::remove_extent_t<T>;
+  ///\brief Weak pointer equivalent.
   using weak_type = cycle_weak_ptr<T>;
 
   /**
@@ -429,7 +431,7 @@ class cycle_member_ptr
    *
    * \throws std::bad_weak_ptr If ptr is owned by an expired owner.
    *
-   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
    * pointing at \p target.
    * This case is currently unspecified in cycle_ptr library.
@@ -454,7 +456,7 @@ class cycle_member_ptr
    * \post
    * this->get() == target
    *
-   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
    * pointing at \p target.
    * This case is currently unspecified in cycle_ptr library.
@@ -634,7 +636,7 @@ class cycle_member_ptr
    * \param owner The owner object of this member pointer.
    * \param ptr Pointer to initalize with.
    *
-   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
    * pointing at \p target.
    * This case is currently unspecified in cycle_ptr library.
@@ -662,7 +664,7 @@ class cycle_member_ptr
    * \param owner The owner object of this member pointer.
    * \param ptr Pointer to initalize with.
    *
-   * \bugs It looks like std::shared_ptr allows similar aliases to be
+   * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
    * pointing at \p target.
    * This case is currently unspecified in cycle_ptr library.
@@ -1233,15 +1235,26 @@ class cycle_gptr {
   friend auto cycle_ptr::allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<Type>;
 
  public:
+  ///\copydoc cycle_member_ptr::element_type
   using element_type = std::remove_extent_t<T>;
+  ///\copydoc cycle_member_ptr::weak_type
   using weak_type = cycle_weak_ptr<T>;
 
+  ///\brief Default constructor.
+  ///\post *this == nullptr
   constexpr cycle_gptr() noexcept {}
 
+  ///\brief Nullptr constructor.
+  ///\post *this == nullptr
   constexpr cycle_gptr([[maybe_unused]] std::nullptr_t nil) noexcept
   : cycle_gptr()
   {}
 
+  /**
+   * \brief Copy constructor.
+   * \post
+   * *this == other
+   */
   cycle_gptr(const cycle_gptr& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
@@ -1249,25 +1262,53 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire_no_red();
   }
 
+  /**
+   * \brief Move constructor.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   */
   cycle_gptr(cycle_gptr&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
+  /**
+   * \brief Copy constructor.
+   * \post
+   * *this == other
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_gptr(const cycle_gptr<U>& other)
+  cycle_gptr(const cycle_gptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire_no_red();
   }
 
+  /**
+   * \brief Move constructor.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(cycle_gptr<U>&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
+  /**
+   * \brief Copy constructor.
+   * \post
+   * *this == other
+   *
+   * \throws std::runtime_error if owner of \p other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(const cycle_member_ptr<U>& other)
   : target_(other.target_),
@@ -1277,6 +1318,16 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
   }
 
+  /**
+   * \brief Move constructor.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   *
+   * \throws std::runtime_error if owner of \p other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_gptr(cycle_member_ptr<U>&& other)
   : cycle_gptr(other)
@@ -1284,6 +1335,14 @@ class cycle_gptr {
     other.reset();
   }
 
+  /**
+   * \brief Aliasing constructor.
+   * \post
+   * control block of this == control block of other
+   *
+   * \post
+   * this->get() == target
+   */
   template<typename U>
   cycle_gptr(const cycle_gptr<U>& other, element_type* target) noexcept
   : target_(target),
@@ -1292,6 +1351,16 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire_no_red();
   }
 
+  /**
+   * \brief Aliasing constructor.
+   * \post
+   * control block of this == control block of other
+   *
+   * \post
+   * this->get() == target
+   *
+   * \throws std::runtime_error if owner of \p other is expired.
+   */
   template<typename U>
   cycle_gptr(const cycle_member_ptr<U>& other, element_type* target)
   : target_(target),
@@ -1301,6 +1370,13 @@ class cycle_gptr {
     if (target_ctrl_ != nullptr) target_ctrl_->acquire();
   }
 
+  /**
+   * \brief Construct from cycle_weak_ptr.
+   * \post
+   * *this == other.lock()
+   *
+   * \throws std::bad_weak_ptr if other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   explicit cycle_gptr(const cycle_weak_ptr<U>& other)
   : target_(other.target_),
@@ -1310,6 +1386,11 @@ class cycle_gptr {
       throw std::bad_weak_ptr();
   }
 
+  /**
+   * \brief Copy assignment.
+   * \post
+   * *this == other
+   */
   auto operator=(const cycle_gptr& other)
   noexcept
   -> cycle_gptr& {
@@ -1323,6 +1404,14 @@ class cycle_gptr {
     return *this;
   }
 
+  /**
+   * \brief Move assignment.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   */
   auto operator=(cycle_gptr&& other)
   noexcept
   -> cycle_gptr& {
@@ -1335,6 +1424,11 @@ class cycle_gptr {
     return *this;
   }
 
+  /**
+   * \brief Copy assignment.
+   * \post
+   * *this == other
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   noexcept
@@ -1349,6 +1443,14 @@ class cycle_gptr {
     return *this;
   }
 
+  /**
+   * \brief Move assignment.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
   noexcept
@@ -1362,6 +1464,13 @@ class cycle_gptr {
     return *this;
   }
 
+  /**
+   * \brief Copy assignment.
+   * \post
+   * *this == other
+   *
+   * \throws std::runtime_error if other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   -> cycle_gptr& {
@@ -1377,6 +1486,16 @@ class cycle_gptr {
     return *this;
   }
 
+  /**
+   * \brief Move assignment.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   *
+   * \throws std::runtime_error if other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_member_ptr<U>&& other)
   -> cycle_gptr& {
@@ -1390,6 +1509,11 @@ class cycle_gptr {
       target_ctrl_->release();
   }
 
+  /**
+   * \brief Clear this pointer.
+   * \post
+   * *this == nullptr
+   */
   auto reset()
   noexcept
   -> void {
@@ -1400,6 +1524,14 @@ class cycle_gptr {
     }
   }
 
+  /**
+   * \brief Swap with \p other.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == original value of *this
+   */
   auto swap(cycle_gptr& other)
   noexcept
   -> void {
@@ -1407,17 +1539,34 @@ class cycle_gptr {
     target_ctrl_.swap(other.target_ctrl_);
   }
 
+  /**
+   * \brief Swap with \p other.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == original value of *this
+   *
+   * \throws std::runtime_error if other is expired.
+   */
   auto swap(cycle_member_ptr<T>& other)
   -> void {
     other.swap(*this);
   }
 
+  /**
+   * \brief Retrieve address of this pointer.
+   */
   auto get() const
   noexcept
   -> T* {
     return target_;
   }
 
+  /**
+   * \brief Dereference operation.
+   * \attention If ``*this == nullptr``, behaviour is undefined.
+   */
   template<bool Enable = !std::is_void_v<T>>
   auto operator*() const
   -> std::enable_if_t<Enable, T>& {
@@ -1425,6 +1574,10 @@ class cycle_gptr {
     return *get();
   }
 
+  /**
+   * \brief Indirection operation.
+   * \attention If ``*this == nullptr``, behaviour is undefined.
+   */
   template<bool Enable = !std::is_void_v<T>>
   auto operator->() const
   -> std::enable_if_t<Enable, T>* {
@@ -1432,10 +1585,15 @@ class cycle_gptr {
     return get();
   }
 
+  /**
+   * \brief Test if this holds a non-nullptr.
+   * \returns ``get() != nullptr``.
+   */
   explicit operator bool() const noexcept {
     return get() != nullptr;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_weak_ptr<U>& other) const
   noexcept
@@ -1443,6 +1601,7 @@ class cycle_gptr {
     return target_ctrl_ < other.target_ctrl_;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_gptr<U>& other) const
   noexcept
@@ -1450,6 +1609,7 @@ class cycle_gptr {
     return target_ctrl_ < other.target_ctrl_;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_member_ptr<U>& other) const
   noexcept
@@ -1458,6 +1618,26 @@ class cycle_gptr {
   }
 
  private:
+  /**
+   * \brief Emplacement of a target value.
+   * \details Used by cycle_weak_ptr and allocate_cycle to initialize this.
+   *
+   * Adopts the reference counter that must have been acquired for the target.
+   * \pre
+   * this->get() == nullptr
+   *
+   * \pre
+   * this has no control block
+   *
+   * \pre
+   * \p new_target_ctrl has had ``store_refs_`` incremented, unless ``new_target_ctrl == nullptr``.
+   *
+   * \post
+   * this->get() == new_target
+   *
+   * \post
+   * control block of this == new_target_ctrl.
+   */
   auto emplace_(T* new_target, detail::intrusive_ptr<detail::base_control> new_target_ctrl)
   noexcept
   -> void {
@@ -1468,7 +1648,9 @@ class cycle_gptr {
     target_ctrl_ = std::move(new_target_ctrl);
   }
 
+  ///\copydoc cycle_member_ptr::target_
   T* target_ = nullptr;
+  ///\brief Control block for this.
   detail::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
 };
 
