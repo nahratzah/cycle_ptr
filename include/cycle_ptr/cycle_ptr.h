@@ -971,12 +971,27 @@ class cycle_member_ptr
   : cycle_member_ptr(cycle_gptr<U>(ptr))
   {}
 
+  /**
+   * \brief Assignment operator.
+   * \post
+   * *this == nullptr
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   auto operator=([[maybe_unused]] std::nullptr_t nil)
   -> cycle_member_ptr& {
     reset();
     return *this;
   }
 
+  /**
+   * \brief Copy assignment operator.
+   * \post
+   * *this == other
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   auto operator=(const cycle_member_ptr& other)
   -> cycle_member_ptr& {
     other.throw_if_owner_expired();
@@ -986,6 +1001,17 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Move assignment operator.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   auto operator=(cycle_member_ptr&& other)
   -> cycle_member_ptr& {
     if (this != &other) [[likely]] {
@@ -995,6 +1021,14 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Copy assignment operator.
+   * \post
+   * *this == other
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   -> cycle_member_ptr& {
@@ -1005,6 +1039,17 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Move assignment operator.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_member_ptr<U>&& other)
   -> cycle_member_ptr& {
@@ -1013,6 +1058,13 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Copy assignment operator.
+   * \post
+   * *this == other
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   -> cycle_member_ptr& {
@@ -1021,6 +1073,16 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Move assignment operator.
+   * \post
+   * *this == original value of other
+   *
+   * \post
+   * other == nullptr
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
   -> cycle_member_ptr& {
@@ -1031,12 +1093,28 @@ class cycle_member_ptr
     return *this;
   }
 
+  /**
+   * \brief Clear this pointer.
+   * \post
+   * *this == nullptr
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   auto reset()
   -> void {
     this->detail::vertex::reset();
     target_ = nullptr;
   }
 
+  /**
+   * \brief Swap with other pointer.
+   * \post
+   * *this == original value of other
+   * other == original value of *this
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   auto swap(cycle_member_ptr& other)
   -> void {
     std::tie(*this, other) = std::forward_as_tuple(
@@ -1044,6 +1122,15 @@ class cycle_member_ptr
         cycle_gptr<T>(std::move(*this)));
   }
 
+  /**
+   * \brief Swap with other pointer.
+   * \post
+   * *this == original value of other
+   * other == original value of *this
+   *
+   * \throws std::runtime_error if the owner of this is expired.
+   * \throws std::runtime_error if the owner of other is expired.
+   */
   auto swap(cycle_gptr<T>& other)
   -> void {
     std::tie(*this, other) = std::forward_as_tuple(
@@ -1051,12 +1138,22 @@ class cycle_member_ptr
         cycle_gptr<T>(std::move(*this)));
   }
 
+  /**
+   * \brief Returns the raw pointer of this.
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   auto get() const
   -> T* {
     throw_if_owner_expired();
     return target_;
   }
 
+  /**
+   * \brief Dereference operation.
+   * \details
+   * Only declared if \p T is not ``void``.
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   template<bool Enable = !std::is_void_v<T>>
   auto operator*() const
   -> std::enable_if_t<Enable, T>& {
@@ -1064,6 +1161,12 @@ class cycle_member_ptr
     return *get();
   }
 
+  /**
+   * \brief Indirection operation.
+   * \details
+   * Only declared if \p T is not ``void``.
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   template<bool Enable = !std::is_void_v<T>>
   auto operator->() const
   -> std::enable_if_t<Enable, T>* {
@@ -1071,10 +1174,16 @@ class cycle_member_ptr
     return get();
   }
 
+  /**
+   * \brief Test if this pointer points holds a non-nullptr value.
+   * \returns get() != nullptr
+   * \throws std::runtime_error if the owner of this is expired.
+   */
   explicit operator bool() const {
     return get() != nullptr;
   }
 
+  ///\brief Ownership ordering.
   template<typename U>
   auto owner_before(const cycle_weak_ptr<U>& other) const
   noexcept
@@ -1082,6 +1191,7 @@ class cycle_member_ptr
     return get_control() < other.target_ctrl_;
   }
 
+  ///\brief Ownership ordering.
   template<typename U>
   auto owner_before(const cycle_gptr<U>& other) const
   noexcept
@@ -1089,6 +1199,7 @@ class cycle_member_ptr
     return get_control() < other.target_ctrl_;
   }
 
+  ///\brief Ownership ordering.
   template<typename U>
   auto owner_before(const cycle_member_ptr<U>& other) const
   noexcept
@@ -1097,6 +1208,7 @@ class cycle_member_ptr
   }
 
  private:
+  ///\brief Target object that this points at.
   T* target_ = nullptr;
 };
 
