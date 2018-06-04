@@ -533,6 +533,7 @@ class cycle_member_ptr
    * *this == nullptr
    *
    * \param owner The owner object of this member pointer.
+   * \param nil ``nullptr``
    */
   cycle_member_ptr(cycle_base& owner, [[maybe_unused]] std::nullptr_t nil) noexcept
   : cycle_member_ptr(owner)
@@ -635,6 +636,7 @@ class cycle_member_ptr
    *
    * \param owner The owner object of this member pointer.
    * \param ptr Pointer to initalize with.
+   * \param target The alias pointer.
    *
    * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
@@ -663,6 +665,7 @@ class cycle_member_ptr
    *
    * \param owner The owner object of this member pointer.
    * \param ptr Pointer to initalize with.
+   * \param target The alias pointer.
    *
    * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
