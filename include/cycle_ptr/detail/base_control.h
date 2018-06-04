@@ -158,6 +158,9 @@ class base_control
     edges_.erase(edges_.iterator_to(v));
   }
 
+  ///\brief Test if this control block represents an unowned object.
+  virtual auto is_unowned() const noexcept -> bool;
+
  private:
   ///\brief Destroy object managed by this control block.
   virtual auto clear_data_() noexcept -> void = 0;

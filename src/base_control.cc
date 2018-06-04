@@ -13,6 +13,12 @@ class unowned_control_impl final
   : base_control(generation_singleton_())
   {}
 
+  auto is_unowned() const
+  noexcept
+  -> bool override {
+    return true;
+  }
+
   auto clear_data_()
   noexcept
   -> void override {
@@ -150,6 +156,12 @@ noexcept
     gen_ptr = generation_.get();
     gen_ptr->gc();
   } while (gen_ptr != generation_);
+}
+
+auto base_control::is_unowned() const
+noexcept
+-> bool {
+  return false;
 }
 
 

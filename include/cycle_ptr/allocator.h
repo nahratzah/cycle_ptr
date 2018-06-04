@@ -102,18 +102,21 @@ class cycle_allocator
    * \brief Compare allocators for equality.
    * \details
    * Two allocators are equal if they use the same owner.
+   *
+   * (Distinct owners are treated as equal if they represent the unowned
+   * control block.)
    */
   auto operator==(const cycle_allocator& other) const
   noexcept(
       std::allocator_traits<Nested>::is_always_equal::value
       || noexcept(std::declval<const Nested&>() == std::declval<const Nested&>()))
   -> bool {
-    if constexpr(std::allocator_traits<Nested>::is_always_equal::value) {
-      return control_ == other.control_;
-    } else {
-      return control_ == other.control_
-          && std::equal_to<Nested>()(*this, other);
+    if constexpr(!std::allocator_traits<Nested>::is_always_equal::value) {
+      if (!std::equal_to<Nested>()(*this, other)) return false;
     }
+
+    return control_ == other.control_
+        || (control_->is_unowned() && other.control_->is_unowned();
   }
 
   ///\brief Inequality comparison.
