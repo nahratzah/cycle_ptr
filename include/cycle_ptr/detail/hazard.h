@@ -66,10 +66,13 @@ class hazard {
   using ptr_set = std::array<data, 4096u / sizeof(data)>;
 
  public:
+  ///\brief Pointer used by this algorithm.
   using pointer = intrusive_ptr<T>;
 
   hazard(const hazard&) = delete;
 
+  ///\brief Create hazard context.
+  ///\details Used for reading hazard pointers.
   explicit hazard() noexcept
   : d_(allocate_())
   {}
@@ -248,6 +251,11 @@ class hazard {
     reset(ptr, pointer(new_value));
   }
 
+  /**
+   * \brief Exchange the pointer.
+   * \details
+   * Clears the store pointer and returns the previous value.
+   */
   static auto exchange(std::atomic<T*>& ptr, std::nullptr_t new_value)
   noexcept
   -> pointer {
@@ -256,6 +264,11 @@ class hazard {
     return pointer(rv, false);
   }
 
+  /**
+   * \brief Exchange the pointer.
+   * \details
+   * Stores the pointer \p new_value in the hazard and returns the previous value.
+   */
   static auto exchange(std::atomic<T*>& ptr, pointer&& new_value)
   noexcept
   -> pointer {
@@ -264,12 +277,29 @@ class hazard {
     return pointer(rv, false);
   }
 
+  /**
+   * \brief Exchange the pointer.
+   * \details
+   * Stores the pointer \p new_value in the hazard and returns the previous value.
+   */
   static auto exchange(std::atomic<T*>& ptr, const pointer& new_value)
   noexcept
   -> pointer {
     return exchange(ptr, pointer(new_value));
   }
 
+  /**
+   * \brief Compare-exchange operation.
+   * \details
+   * Replaces \p ptr with \p desired, if it is equal to \p expected.
+   *
+   * If this fails, \p expected is updated with the value stored in \p ptr.
+   *
+   * This weak operation may fail despite \p ptr holding \p expected.
+   * \param ptr The atomic pointer to change.
+   * \param expected The expected value of \p ptr.
+   * \param desired The value to assign to \p ptr, if \p ptr holds \p expected.
+   */
   static auto compare_exchange_weak(std::atomic<T*>& ptr, pointer& expected, pointer desired)
   noexcept
   -> bool {
@@ -288,6 +318,16 @@ class hazard {
     return false;
   }
 
+  /**
+   * \brief Compare-exchange operation.
+   * \details
+   * Replaces \p ptr with \p desired, if it is equal to \p expected.
+   *
+   * If this fails, \p expected is updated with the value stored in \p ptr.
+   * \param ptr The atomic pointer to change.
+   * \param expected The expected value of \p ptr.
+   * \param desired The value to assign to \p ptr, if \p ptr holds \p expected.
+   */
   static auto compare_exchange_strong(std::atomic<T*>& ptr, pointer& expected, pointer desired)
   noexcept
   -> bool {
@@ -358,66 +398,123 @@ class hazard {
   data& d_;
 };
 
+/**
+ * \brief Hazard pointer.
+ * \details
+ * Implements an atomic, reference-counted pointer.
+ *
+ * Uses the same rules as \ref intrusive_ptr with regards to
+ * acquiring and releasing reference counter.
+ *
+ * \sa intrusive_ptr
+ * \sa hazard
+ */
 template<typename T>
 class hazard_ptr {
  private:
+  ///\brief Algorithm implementation.
   using hazard_t = hazard<T>;
 
  public:
+  ///\brief Element type of the pointer.
   using element_type = T;
+  ///\brief Smart pointer equivalent.
   using pointer = typename hazard_t::pointer;
+  ///\brief Type held in this atomic.
   using value_type = pointer;
 
 #if __cplusplus >= 201703
+  ///\brief Indicate if this is always a lock free implementation.
   static constexpr bool is_always_lock_free = std::atomic<T*>::is_always_lock_free;
 #endif
 
+  ///\brief Test if this instance is lock free.
   auto is_lock_free() const
   noexcept
   -> bool {
     return ptr_.is_lock_free();
   }
 
+  ///\brief Test if this instance is lock free.
   auto is_lock_free() const volatile
   noexcept
   -> bool {
     return ptr_.is_lock_free();
   }
 
+  ///\brief Default constructor initializes to nullptr.
   hazard_ptr() noexcept = default;
 
+  ///\brief Copy construction.
   hazard_ptr(const hazard_ptr& p) noexcept
   : hazard_ptr(hazard_t()(p.ptr_))
   {}
 
+  ///\brief Move construction.
   hazard_ptr(hazard_ptr&& p) noexcept
   : ptr_(p.ptr_.exchange(nullptr, std::memory_order_acq_rel))
   {}
 
+  /**
+   * \brief Initializing constructor.
+   * \post
+   * *this == original value of \p p.
+   *
+   * \post
+   * \p p == nullptr
+   */
   hazard_ptr(pointer&& p) noexcept
   : ptr_(p.detach())
   {}
 
+  /**
+   * \brief Initializing constructor.
+   * \post
+   * *this == \p p
+   */
   hazard_ptr(const pointer& p) noexcept
   : hazard_ptr(pointer(p))
   {}
 
+  ///\brief Destructor.
+  ///\details Releases the held pointer.
   ~hazard_ptr() noexcept {
     reset();
   }
 
+  /**
+   * \brief Copy assignment.
+   * \returns p.get()
+   * \post
+   * *this == \p
+   */
   auto operator=(const hazard_ptr& p)
   noexcept
   -> pointer {
     return *this = p.get();
   }
 
+  /**
+   * \brief Move assignment.
+   * \returns p.get()
+   * \post
+   * *this == original value of \p p
+   *
+   * \post
+   * \p p == nullptr
+   */
   auto operator=(hazard_ptr&& p)
   noexcept
   -> pointer {
     return *this = p.exchange(nullptr);
   }
 
+  /**
+   * \brief Copy assignment.
+   * \returns \p p
+   * \post
+   * *this == \p p
+   */
   auto operator=(const pointer& p)
   noexcept
   -> pointer {
@@ -425,6 +522,15 @@ class hazard_ptr {
     return p;
   }
 
+  /**
+   * \brief Move assignment.
+   * \returns \p p
+   * \post
+   * *this == original value of \p p
+   *
+   * \post
+   * \p p == nullptr
+   */
   auto operator=(pointer&& p)
   noexcept
   -> pointer {
@@ -432,34 +538,77 @@ class hazard_ptr {
     return std::move(p);
   }
 
+  /**
+   * \brief nullptr assignment.
+   * \returns pointer(nullptr)
+   * \post
+   * *this == nullptr
+   */
+  auto operator=([[maybe_unused]] const std::nullptr_t nil)
+  noexcept
+  -> pointer {
+    reset();
+    return nullptr;
+  }
+
+  /**
+   * \brief Reset this.
+   * \post
+   * *this == nullptr
+   */
   auto reset()
   noexcept
   -> void {
     hazard_t::reset(ptr_);
   }
 
+  /**
+   * \brief Reset this.
+   * \post
+   * *this == nullptr
+   */
   auto reset([[maybe_unused]] std::nullptr_t nil)
   noexcept
   -> void {
     hazard_t::reset(ptr_);
   }
 
+  /**
+   * \brief Assignment.
+   * \post
+   * *this == original value of \p p
+   *
+   * \post
+   * \p p == nullptr
+   */
   auto reset(pointer&& p)
   noexcept
   -> void {
     store(std::move(p));
   }
 
+  /**
+   * \brief Assignment.
+   * \post
+   * *this == \p p
+   */
   auto reset(const pointer& p)
   noexcept
   -> void {
     store(p);
   }
 
+  ///\brief Automatic conversion to pointer.
   operator pointer() const noexcept {
     return get();
   }
 
+  /**
+   * \brief Read the value of this.
+   * \details Marked ``[[nodiscard]]``, as there's no point in reading the
+   * pointer if you're not going to evaluate it.
+   * \returns Pointer in this.
+   */
   [[nodiscard]]
   auto get() const
   noexcept
@@ -467,6 +616,12 @@ class hazard_ptr {
     return load();
   }
 
+  /**
+   * \brief Read the value of this.
+   * \details Marked ``[[nodiscard]]``, as there's no point in reading the
+   * pointer if you're not going to evaluate it.
+   * \returns Pointer in this.
+   */
   [[nodiscard]]
   auto load() const
   noexcept
@@ -474,18 +629,41 @@ class hazard_ptr {
     return hazard_t()(ptr_);
   }
 
+  /**
+   * \brief Assignment.
+   * \post
+   * *this == original value of \p p
+   *
+   * \post
+   * \p p == nullptr
+   */
   auto store(pointer&& p)
   noexcept
   -> void {
     hazard_t::reset(ptr_, std::move(p));
   }
 
+  /**
+   * \brief Assignment.
+   * \post
+   * *this == \p p
+   */
   auto store(const pointer& p)
   noexcept
   -> void {
     hazard_t::reset(ptr_, p);
   }
 
+  /**
+   * \brief Exchange operation.
+   * \param p New value of this.
+   * \returns Original value of this.
+   * \post
+   * *this == original value of \p p
+   *
+   * \post
+   * \p p == nullptr
+   */
   [[nodiscard]]
   auto exchange(pointer&& p)
   noexcept
@@ -493,6 +671,13 @@ class hazard_ptr {
     return hazard_t::exchange(ptr_, std::move(p));
   }
 
+  /**
+   * \brief Exchange operation.
+   * \param p New value of this.
+   * \returns Original value of this.
+   * \post
+   * *this == \p p
+   */
   [[nodiscard]]
   auto exchange(const pointer& p)
   noexcept
@@ -500,30 +685,35 @@ class hazard_ptr {
     return hazard_t::exchange(ptr_, p);
   }
 
+  ///\brief Weak compare-exchange operation.
   auto compare_exchange_weak(pointer& expected, pointer desired)
   noexcept
   -> bool {
     return hazard_t::compare_exchange_weak(expected, std::move(desired));
   }
 
+  ///\brief Strong compare-exchange operation.
   auto compare_exchange_strong(pointer& expected, pointer desired)
   noexcept
   -> bool {
     return hazard_t::compare_exchange_strong(expected, std::move(desired));
   }
 
+  ///\brief Equality comparison.
   friend auto operator==(const hazard_ptr& x, std::nullptr_t y)
   noexcept
   -> bool {
     return x.ptr_.load(std::memory_order_acquire) == y;
   }
 
+  ///\brief Equality comparison.
   friend auto operator==(const hazard_ptr& x, std::add_const_t<T>* y)
   noexcept
   -> bool {
     return x.ptr_.load(std::memory_order_acquire) == y;
   }
 
+  ///\brief Equality comparison.
   template<typename U>
   friend auto operator==(const hazard_ptr& x, const intrusive_ptr<U>& y)
   noexcept
@@ -531,18 +721,21 @@ class hazard_ptr {
     return x == y.get();
   }
 
+  ///\brief Equality comparison.
   friend auto operator==(std::nullptr_t x, const hazard_ptr& y)
   noexcept
   -> bool {
     return y == x;
   }
 
+  ///\brief Equality comparison.
   friend auto operator==(std::add_const_t<T>* x, const hazard_ptr& y)
   noexcept
   -> bool {
     return y == x;
   }
 
+  ///\brief Equality comparison.
   template<typename U>
   friend auto operator==(const intrusive_ptr<U>& x, const hazard_ptr& y)
   noexcept
@@ -550,18 +743,21 @@ class hazard_ptr {
     return y == x;
   }
 
+  ///\brief Inequality comparison.
   friend auto operator!=(const hazard_ptr& x, std::nullptr_t y)
   noexcept
   -> bool {
     return !(x == y);
   }
 
+  ///\brief Inequality comparison.
   friend auto operator!=(const hazard_ptr& x, std::add_const_t<T>* y)
   noexcept
   -> bool {
     return !(x == y);
   }
 
+  ///\brief Inequality comparison.
   template<typename U>
   friend auto operator!=(const hazard_ptr& x, const intrusive_ptr<U>& y)
   noexcept
@@ -569,18 +765,21 @@ class hazard_ptr {
     return !(x == y);
   }
 
+  ///\brief Inequality comparison.
   friend auto operator!=(std::nullptr_t x, const hazard_ptr& y)
   noexcept
   -> bool {
     return !(x == y);
   }
 
+  ///\brief Inequality comparison.
   friend auto operator!=(std::add_const_t<T>* x, const hazard_ptr& y)
   noexcept
   -> bool {
     return !(x == y);
   }
 
+  ///\brief Inequality comparison.
   template<typename U>
   friend auto operator!=(const intrusive_ptr<U>& x, const hazard_ptr& y)
   noexcept
@@ -589,6 +788,7 @@ class hazard_ptr {
   }
 
  private:
+  ///\brief Internally used atomic pointer.
   std::atomic<T*> ptr_ = nullptr;
 };
 
