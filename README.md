@@ -1,4 +1,4 @@
-# Cycle\_ptr library
+# Cycle Pointer library
 
 This library is a smart pointer library, that allows for cycles in
 datastructures.
