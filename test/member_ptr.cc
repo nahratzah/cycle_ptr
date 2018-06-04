@@ -1,10 +1,14 @@
 #include <cycle_ptr/cycle_ptr.h>
+#include <cycle_ptr/allocator.h>
 #include "UnitTest++/UnitTest++.h"
+#include <vector>
 
 using namespace cycle_ptr;
 
 class create_destroy_check {
  public:
+  constexpr create_destroy_check() noexcept = default;
+
   constexpr create_destroy_check(bool* destroyed) noexcept
   : destroyed(destroyed)
   {}
@@ -34,6 +38,46 @@ class owner
   {}
 
   cycle_member_ptr<create_destroy_check> target;
+};
+
+class owner_of_collection
+: public cycle_base
+{
+ public:
+  using vector_type = std::vector<
+      cycle_member_ptr<create_destroy_check>,
+      cycle_allocator<std::allocator<cycle_member_ptr<create_destroy_check>>>>;
+
+  owner_of_collection()
+  : data(vector_type::allocator_type(*this))
+  {}
+
+  owner_of_collection(const owner_of_collection& y)
+  : data(y.data, vector_type::allocator_type(*this))
+  {}
+
+  owner_of_collection(owner_of_collection&& y)
+  : data(std::move(y.data), vector_type::allocator_type(*this))
+  {}
+
+  auto operator=(const owner_of_collection& y)
+  -> owner_of_collection& {
+    data = y.data;
+    return *this;
+  }
+
+  auto operator=(owner_of_collection&& y)
+  -> owner_of_collection& {
+    data = std::move(y.data);
+    return *this;
+  }
+
+  template<typename Iter>
+  owner_of_collection(Iter b, Iter e)
+  : data(b, e, vector_type::allocator_type(*this))
+  {}
+
+  vector_type data;
 };
 
 TEST(constructor) {
@@ -102,6 +146,18 @@ TEST(cycle) {
   ptr_2 = nullptr;
   CHECK(first_destroyed);
   CHECK(second_destroyed);
+}
+
+TEST(move_seq) {
+  std::vector<cycle_gptr<create_destroy_check>> pointers;
+  std::generate_n(
+      std::back_inserter(pointers),
+      10'000,
+      []() {
+        return make_cycle<create_destroy_check>();
+      });
+
+  auto ooc = make_cycle<owner_of_collection>(pointers.cbegin(), pointers.cend());
 }
 
 int main() {
