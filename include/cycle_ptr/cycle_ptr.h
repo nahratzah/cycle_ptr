@@ -1655,6 +1655,13 @@ class cycle_gptr {
 };
 
 
+/**
+ * \brief Weak cycle pointer.
+ * \details
+ * A weak pointer does not have ownership of its target,
+ * depending on cycle_member_ptr and cycle_gptr keeping its target
+ * reachable.
+ */
 template<typename T>
 class cycle_weak_ptr {
   template<typename> friend class cycle_member_ptr;
@@ -1662,44 +1669,60 @@ class cycle_weak_ptr {
   template<typename> friend class cycle_weak_ptr;
 
  public:
+  ///\copydoc cycle_member_ptr::element_type
   using element_type = std::remove_extent_t<T>;
 
+  ///\brief Default constructor.
   constexpr cycle_weak_ptr() noexcept {}
 
+  ///\brief Copy constructor.
   cycle_weak_ptr(const cycle_weak_ptr& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {}
 
+  /**
+   * \brief Move constructor.
+   * \post
+   * other.lock() == nullptr
+   */
   cycle_weak_ptr(cycle_weak_ptr&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
+  ///\brief Copy constructor.
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_weak_ptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {}
 
+  ///\brief Move constructor.
+  ///\post other.lock() == nullptr
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(cycle_weak_ptr<U>&& other) noexcept
   : target_(std::exchange(other.target_, nullptr)),
     target_ctrl_(other.target_ctrl_.detach(), false)
   {}
 
+  ///\brief Create weak pointer from \p other.
+  ///\post this->lock() == other
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_gptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.target_ctrl_)
   {}
 
+  ///\brief Create weak pointer from \p other.
+  ///\post this->lock() == other
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   cycle_weak_ptr(const cycle_member_ptr<U>& other) noexcept
   : target_(other.target_),
     target_ctrl_(other.get_control())
   {}
 
+  ///\brief Copy assignment.
   auto operator=(const cycle_weak_ptr& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -1708,6 +1731,8 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Move assignment.
+  ///\post other.lock() == nullptr
   auto operator=(cycle_weak_ptr&& other)
   noexcept
   -> cycle_weak_ptr& {
@@ -1716,6 +1741,7 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Copy assignment.
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_weak_ptr<U>& other)
   noexcept
@@ -1725,6 +1751,8 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Move assignment.
+  ///\post other.lock() == nullptr
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_weak_ptr<U>&& other)
   noexcept
@@ -1734,6 +1762,8 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Assign \p other.
+  ///post this->lock() == other
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
   noexcept
@@ -1743,6 +1773,8 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Assign \p other.
+  ///post this->lock() == other
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   noexcept
@@ -1752,6 +1784,8 @@ class cycle_weak_ptr {
     return *this;
   }
 
+  ///\brief Reset this pointer.
+  ///\post this->lock() == nullptr
   auto reset()
   noexcept
   -> void {
@@ -1759,6 +1793,7 @@ class cycle_weak_ptr {
     target_ctrl_.reset();
   }
 
+  ///\brief Swap with another weak pointer.
   auto swap(cycle_weak_ptr& other)
   noexcept
   -> void {
@@ -1766,12 +1801,20 @@ class cycle_weak_ptr {
     target_ctrl_.swap(other.target_ctrl_);
   }
 
+  ///\brief Test if this weak pointer is expired.
+  ///\returns True if this weak pointer is expired, meaning that its pointee has been collected.
   auto expired() const
   noexcept
   -> bool {
     return target_ctrl_ == nullptr || target_ctrl_->expired();
   }
 
+  /**
+   * \brief Retrieve cycle_gptr from this.
+   * \details
+   * Unlike ``cycle_gptr<T>(*this)``, this method does not throw an exception.
+   * \returns cycle_gptr holding the value of this, or nullptr if this is expired.
+   */
   auto lock() const
   noexcept
   -> cycle_gptr<T> {
@@ -1781,6 +1824,7 @@ class cycle_weak_ptr {
     return result;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_weak_ptr<U>& other) const
   noexcept
@@ -1788,6 +1832,7 @@ class cycle_weak_ptr {
     return target_ctrl_ < other.target_ctrl_;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_gptr<U>& other) const
   noexcept
@@ -1795,6 +1840,7 @@ class cycle_weak_ptr {
     return target_ctrl_ < other.target_ctrl_;
   }
 
+  ///\copydoc cycle_member_ptr::owner_before
   template<typename U>
   auto owner_before(const cycle_member_ptr<U>& other) const
   noexcept
@@ -1803,7 +1849,9 @@ class cycle_weak_ptr {
   }
 
  private:
-  T* target_ = nullptr; // Valid iff target_ctrl_ != nullptr.
+  ///\brief Target of this weak pointer.
+  T* target_ = nullptr;
+  ///\brief Control block of this weak pointer.
   detail::intrusive_ptr<detail::base_control> target_ctrl_ = nullptr;
 };
 
