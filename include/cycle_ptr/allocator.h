@@ -48,7 +48,7 @@ class cycle_allocator
 
   ///\brief Create allocator, with declared ownership.
   ///\param base The owner of elements created using this allocator.
-  ///\param args... Arguments to pass to underlying allocator constructor.
+  ///\param args Arguments to pass to underlying allocator constructor.
   template<typename... Args, typename = std::enable_if_t<std::is_constructible_v<Nested, Args...>>>
   explicit cycle_allocator(const cycle_base& base, Args&&... args)
   : Nested(std::forward<Args>(args)...),
