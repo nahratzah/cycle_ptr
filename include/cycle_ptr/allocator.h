@@ -57,7 +57,7 @@ class cycle_allocator
 
   ///\brief Create allocator, with elements having no ownership.
   ///\param unowned_tag Tag indicating that elements created by this allocator do not have an owning object.
-  ///\param args... Arguments to pass to underlying allocator constructor.
+  ///\param args Arguments to pass to underlying allocator constructor.
   template<typename... Args, typename = std::enable_if_t<std::is_constructible_v<Nested, Args...>>>
   explicit cycle_allocator([[maybe_unused]] unowned_cycle_t unowned_tag, Args&&... args)
   : Nested(std::forward<Args>(args)...),
