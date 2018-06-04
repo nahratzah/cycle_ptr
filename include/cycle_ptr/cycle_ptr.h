@@ -2286,8 +2286,12 @@ auto exchange(cycle_ptr::cycle_member_ptr<T>& x, U&& y) {
  */
 template<typename T>
 struct hash<cycle_ptr::cycle_member_ptr<T>> {
+  ///\brief Argument type.
+  ///\deprecated Since C++17.
   [[deprecated]]
   typedef cycle_ptr::cycle_member_ptr<T> argument_type;
+  ///\brief Argument type.
+  ///\deprecated Since C++17.
   [[deprecated]]
   typedef std::size_t result_type;
 
@@ -2327,6 +2331,8 @@ template<typename T>
 struct hash<cycle_ptr::cycle_gptr<T>>
 : hash<cycle_ptr::cycle_member_ptr<T>>
 {
+  ///\brief Argument type.
+  ///\deprecated Since C++17.
   [[deprecated]]
   typedef cycle_ptr::cycle_gptr<T> argument_type;
 };
