@@ -111,8 +111,11 @@ class generation {
      * potentially large number of merges.
      * For RAII style acquisition, the pointers of an object are likely
      * filled with values allocated earlier, thus with lower sequence numbers.
+     *
+     * By starting well above 2, we allow for some sequence number shifting
+     * for destination generations created early at program startup.
      */
-    static std::atomic<std::uintmax_t> state{ 2u };
+    static std::atomic<std::uintmax_t> state{ 1002u };
     const std::uintmax_t result =
         state.fetch_add(2u, std::memory_order_relaxed)
         | moveable_seq;
