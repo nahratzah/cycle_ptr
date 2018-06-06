@@ -11,7 +11,7 @@ struct delay_gc_impl_ {
 
   static auto singleton()
   -> delay_gc_impl_& {
-    delay_gc_impl_ impl;
+    static delay_gc_impl_ impl;
     return impl;
   }
 };
