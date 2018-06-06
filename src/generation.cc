@@ -52,7 +52,56 @@ auto set_delay_gc(delay_gc f)
 } /* namespace cycle_ptr */
 
 namespace cycle_ptr::detail {
+namespace {
 
+
+/*
+ * Sequence number generation.
+ * Special value 0 is reserved for the 'unowned' generation.
+ *
+ * We use the low bit to indicate if a generation can have its sequence
+ * number altered.
+ *
+ * Consequently, we start at number 2, so the 'unowned' generation can share seq 0
+ * without ever getting merged and we're not using the low bit.
+ * We also advance with a step size of 2, for this reason.
+ *
+ * By allowing the sequence number to be decremented, we can update
+ * sequence numbers for RAII style acquisition, instead of requiring
+ * potentially large number of merges.
+ * For RAII style acquisition, the pointers of an object are likely
+ * filled with values allocated earlier, thus with lower sequence numbers.
+ *
+ * By starting well above 2, we allow for some sequence number shifting
+ * for destination generations created early at program startup.
+ */
+std::atomic<std::uintmax_t> new_seq_state{ 1002u };
+
+
+} /* namespace cycle_ptr::detail::<unnamed> */
+
+
+auto generation::new_seq_()
+noexcept
+-> std::uintmax_t {
+  // Increment by 2, see explanation at new_seq_state for why.
+  const std::uintmax_t result =
+      new_seq_state.fetch_add(2u, std::memory_order_relaxed)
+      | moveable_seq;
+
+  // uintmax_t will be at least 64 bit.
+  // If allocating a new generation each nano second,
+  // we would run out of sequence numbers after ~292 years.
+  // (584 years if we didn't use a step size of 2.)
+  //
+  // Note that the algorithm still does the right thing when sequence numbers
+  // wrap around.
+  // But it could mean a giant performance penalty due to merging into
+  // surviving high-sequence generations.
+  assert(result != UINTPTR_MAX); // We ran out of sequence numbers.
+
+  return result;
+}
 
 auto generation::gc()
 noexcept
