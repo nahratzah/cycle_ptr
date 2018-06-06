@@ -84,10 +84,17 @@ noexcept
       }
 
       // Maybe alter the sequence number.
+      // We prevent the reduced generation value from going below 3:
+      // - 3 & ~moveable_seq == 2, which is above generation 0 (used for unowned)
+      // - if we let it go to 1, the counter could end up becoming 0,
+      //   which could lead to unowned object generation being merged in,
+      //   causing potentially very expensive GC invocations, if there are a lot
+      //   of unowned objects.
       if (src_gen != dst_gen && !order_invariant(*src_gen, *dst_gen)) {
         std::uintmax_t src_gen_seq = src_gen->seq_.load(std::memory_order_relaxed);
         const std::uintmax_t dst_gen_seq = dst_gen->seq();
-        while ((src_gen_seq & moveable_seq) == moveable_seq && dst_gen_seq > 0u) {
+        while ((src_gen_seq & moveable_seq) == moveable_seq && dst_gen_seq > 3u) {
+          assert((dst_gen_seq & moveable_seq) == 0u);
           if (src_gen->seq_.compare_exchange_weak(
                   src_gen_seq,
                   dst_gen_seq - 1u,
