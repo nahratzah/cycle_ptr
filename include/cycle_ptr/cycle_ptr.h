@@ -116,7 +116,7 @@ class cycle_base {
    * always throw ``std::bad_weak_ptr``.
    */
   template<typename T>
-  auto shared_from_this(T* this_ptr)
+  auto shared_from_this(T* this_ptr) const
   -> cycle_gptr<T> {
     assert(control_ != nullptr);
 
@@ -1233,6 +1233,7 @@ class cycle_gptr {
   template<typename> friend class cycle_member_ptr;
   template<typename> friend class cycle_gptr;
   template<typename> friend class cycle_weak_ptr;
+  friend class cycle_base;
 
   template<typename Type, typename Alloc, typename... Args>
   friend auto cycle_ptr::allocate_cycle(Alloc alloc, Args&&... args) -> cycle_gptr<Type>;
