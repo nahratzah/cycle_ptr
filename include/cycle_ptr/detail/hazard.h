@@ -35,7 +35,7 @@ class hazard {
    * Padding is added to make the data type not only cache-line aligned,
    * but also cache-line sized.
    */
-#if __cplusplus >= 201703
+#if __cpp_lib_hardware_interference_size >= 201703
   struct alignas(std::hardware_destructive_interference_size) data {
     static_assert(sizeof(std::atomic<T*>) < std::hardware_destructive_interference_size,
         "Cycle_ptr did not expect a platform where cache line is less than or equal to a pointer.");
