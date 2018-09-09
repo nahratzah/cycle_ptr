@@ -21,7 +21,9 @@ else()
 endif()
 
 set(headers
+    include/cycle_ptr/allocator.h
     include/cycle_ptr/cycle_ptr.h
+    include/cycle_ptr/util.h
     )
 set(headers_detail
     include/cycle_ptr/detail/base_control.h
@@ -29,6 +31,7 @@ set(headers_detail
     include/cycle_ptr/detail/control.h
     include/cycle_ptr/detail/generation.h
     include/cycle_ptr/detail/hazard.h
+    include/cycle_ptr/detail/intrusive_ptr.h
     include/cycle_ptr/detail/llist.h
     include/cycle_ptr/detail/vertex.h
     )
