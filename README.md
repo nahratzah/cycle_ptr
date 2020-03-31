@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nahratzah/cycle_ptr.svg?branch=master)](https://travis-ci.org/nahratzah/cycle_ptr)
+
 # Cycle Pointer library
 
 This library is a smart pointer library, that allows for cycles in
