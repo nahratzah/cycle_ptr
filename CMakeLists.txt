@@ -36,8 +36,6 @@ set(headers_detail
     include/cycle_ptr/detail/vertex.h
     )
 
-find_package (Boost REQUIRED)
-
 add_library (cycle_ptr
     src/vertex.cc
     src/base_control.cc
@@ -54,6 +52,8 @@ endif()
 target_include_directories(cycle_ptr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+find_package (Boost REQUIRED)
 target_include_directories (cycle_ptr PUBLIC ${Boost_INCLUDE_DIR})
 
 install(FILES ${headers} DESTINATION "include/cycle_ptr")
