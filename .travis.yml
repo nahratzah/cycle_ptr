@@ -6,25 +6,33 @@ dist: bionic
 jobs:
   include:
     - env:
-         - MATRIX_EVAL="CC=gcc && CXX=g++"
+        - CXX=g++
+      before_install:
+        # We need to ensure the cmake config for UnitTest++ is installed properly,
+        # because the folks at ubuntu don't include the cmake files.
+        # We use the system compiler to mimic the OS package.
+        - mkdir /tmp/unit_test_plus_plus
+        - pushd /tmp/unit_test_plus_plus
+        - wget -O /tmp/unittest-cpp-v2.0.0.tar.gz https://github.com/unittest-cpp/unittest-cpp/archive/v2.0.0.tar.gz
+        - tar zxf /tmp/unittest-cpp-v2.0.0.tar.gz
+        - mkdir build
+        - cd build
+        - env -u CXX cmake ../unittest-cpp-2.0.0 && make && sudo make install
+        - popd
     - env:
-         - MATRIX_EVAL="CC=clang && CXX=clang++"
-
-before_install:
-  # We need to ensure the cmake config for UnitTest++ is installed properly,
-  # because the folks at ubuntu don't include the cmake files.
-  # We use the system compiler to mimic the OS package.
-  - mkdir /tmp/unit_test_plus_plus
-  - pushd /tmp/unit_test_plus_plus
-  - wget -O /tmp/unittest-cpp-v2.0.0.tar.gz https://github.com/unittest-cpp/unittest-cpp/archive/v2.0.0.tar.gz
-  - tar zxf /tmp/unittest-cpp-v2.0.0.tar.gz
-  - mkdir build
-  - cd build
-  - cmake ../unittest-cpp-2.0.0 && make && sudo make install
-  - popd
-
-  # Publish the compiler
-  - eval "${MATRIX_EVAL}"
+        - CXX=clang++
+      before_install:
+        # We need to ensure the cmake config for UnitTest++ is installed properly,
+        # because the folks at ubuntu don't include the cmake files.
+        # We use the system compiler to mimic the OS package.
+        - mkdir /tmp/unit_test_plus_plus
+        - pushd /tmp/unit_test_plus_plus
+        - wget -O /tmp/unittest-cpp-v2.0.0.tar.gz https://github.com/unittest-cpp/unittest-cpp/archive/v2.0.0.tar.gz
+        - tar zxf /tmp/unittest-cpp-v2.0.0.tar.gz
+        - mkdir build
+        - cd build
+        - env -u CXX cmake ../unittest-cpp-2.0.0 && make && sudo make install
+        - popd
 
 before_script:
   # create a build folder for the out-of-source build
