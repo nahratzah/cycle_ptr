@@ -11,12 +11,6 @@ jobs:
             - libboost-all-dev
       env:
          - MATRIX_EVAL="CC=gcc && CXX=g++"
-  include:
-    - addons:
-        apt:
-          packages:
-            - libboost-all-dev
-      env:
          - MATRIX_EVAL="CC=clang && CXX=clang++"
 
 before_install:
