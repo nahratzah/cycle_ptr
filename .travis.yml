@@ -5,6 +5,7 @@ jobs:
   include:
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -20,6 +21,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -35,6 +37,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -50,6 +53,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -65,6 +69,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -81,6 +86,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -97,6 +103,7 @@ jobs:
 
     # works on Precise and Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -113,6 +120,7 @@ jobs:
 
     # works on Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -128,6 +136,7 @@ jobs:
 
     # works on Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
@@ -143,6 +152,7 @@ jobs:
 
     # works on Trusty
     - os: linux
+      dist: bionic
       addons:
         apt:
           sources:
