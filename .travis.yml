@@ -127,6 +127,7 @@ addons:
       - cmake-data
       - cmake
       - libboost-all-dev
+      - libunittest++-dev
 
 before_script:
   # create a build folder for the out-of-source build
