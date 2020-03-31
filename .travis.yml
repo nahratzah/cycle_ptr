@@ -11,13 +11,18 @@ jobs:
             - libboost-all-dev
       env:
          - MATRIX_EVAL="CC=gcc && CXX=g++"
+  include:
+    - addons:
+        apt:
+          packages:
+            - libboost-all-dev
+      env:
+         - MATRIX_EVAL="CC=clang && CXX=clang++"
 
 before_install:
-  - eval "${MATRIX_EVAL}"
-
-before_script:
   # We need to ensure the cmake config for UnitTest++ is installed properly,
-  # because the folks at ubuntu don't.
+  # because the folks at ubuntu don't include the cmake files.
+  # We use the system compiler to mimic the OS package.
   - mkdir /tmp/unit_test_plus_plus
   - pushd /tmp/unit_test_plus_plus
   - wget -O /tmp/unittest-cpp-v2.0.0.tar.gz https://github.com/unittest-cpp/unittest-cpp/archive/v2.0.0.tar.gz
@@ -27,6 +32,10 @@ before_script:
   - cmake ../unittest-cpp-2.0.0 && make && sudo make install
   - popd
 
+  # Publish the compiler
+  - eval "${MATRIX_EVAL}"
+
+before_script:
   # create a build folder for the out-of-source build
   - mkdir build
   # switch to build directory
