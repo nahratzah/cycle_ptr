@@ -150,7 +150,7 @@ before_script:
   - tar zxf /tmp/unittest-cpp-v2.0.0.tar.gz
   - mkdir build
   - cd build
-  - cmake .. && make && sudo make install
+  - cmake ../unittest-cpp-2.0.0 && make && sudo make install
   - popd
 
   # create a build folder for the out-of-source build
