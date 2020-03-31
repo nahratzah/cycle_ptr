@@ -1,12 +1,12 @@
 ---
 language: cpp
+os: linux
+dist: xenial
 
 jobs:
   include:
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -20,9 +20,7 @@ jobs:
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -36,9 +34,7 @@ jobs:
          - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -52,9 +48,7 @@ jobs:
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -68,9 +62,7 @@ jobs:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -85,9 +77,7 @@ jobs:
         - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -102,9 +92,7 @@ jobs:
         - MATRIX_EVAL="CC=clang-3.7 && CXX=clang++-3.7"
 
     # works on Precise and Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -119,9 +107,7 @@ jobs:
         - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 
     # works on Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - llvm-toolchain-trusty-3.9
@@ -135,9 +121,7 @@ jobs:
         - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
 
     # works on Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - llvm-toolchain-trusty-4.0
@@ -151,9 +135,7 @@ jobs:
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
     # works on Trusty
-    - os: linux
-      dist: bionic
-      addons:
+    - addons:
         apt:
           sources:
             - llvm-toolchain-trusty-5.0
@@ -167,9 +149,13 @@ jobs:
         - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
 before_install:
-    - eval "${MATRIX_EVAL}"
+  - eval "${MATRIX_EVAL}"
 
 before_script:
+  # We need to ensure the cmake config for UnitTest++ is installed properly,
+  # because the folks at ubuntu don't.
+  - sudo wget -O /usr/lib/cmake/UnitTest++/UnitTest++.cmake 'https://raw.githubusercontent.com/unittest-cpp/unittest-cpp/v2.0.0/cmake/UnitTest%2B%2BConfig.cmake'
+
   # create a build folder for the out-of-source build
   - mkdir build
   # switch to build directory
