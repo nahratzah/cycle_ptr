@@ -7,8 +7,6 @@ set(CYCLE_PTR_VERSION_MAJOR 0 CACHE STRING "major version" FORCE)
 set(CYCLE_PTR_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
 set(CYCLE_PTR_VERSION ${CYCLE_PTR_VERSION_MAJOR}.${CYCLE_PTR_VERSION_MINOR} CACHE STRING "version" FORCE)
 
-enable_testing()
-
 include (CheckCXXCompilerFlag)
 check_cxx_compiler_flag ("-std=c++17" STD_CXX17)
 check_cxx_compiler_flag ("-std=c++1z" STD_CXX1Z)

@@ -34,6 +34,21 @@ jobs:
         - env -u CXX cmake ../unittest-cpp-2.0.0 && make && sudo make install
         - popd
 
+    - os: osx
+      osx_image: xcode9.4
+      before_install:
+        # The homebrew package suffers from the same shortcoming as the linux one:
+        # it is missing the cmake files.
+        # Just force it manually.
+        - mkdir /tmp/unit_test_plus_plus
+        - pushd /tmp/unit_test_plus_plus
+        - wget -O /tmp/unittest-cpp-v2.0.0.tar.gz https://github.com/unittest-cpp/unittest-cpp/archive/v2.0.0.tar.gz
+        - tar zxf /tmp/unittest-cpp-v2.0.0.tar.gz
+        - mkdir build
+        - cd build
+        - env -u CXX cmake ../unittest-cpp-2.0.0 && make && sudo make install
+        - popd
+
 before_script:
   # create a build folder for the out-of-source build
   - mkdir build
