@@ -1,7 +1,7 @@
 ---
 language: cpp
 
-matrix:
+jobs:
   include:
     # works on Precise and Trusty
     - os: linux
