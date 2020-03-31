@@ -34,6 +34,9 @@ jobs:
         - env -u CXX cmake ../unittest-cpp-2.0.0 && make && sudo make install
         - popd
 
+    - os: osx
+      osx_image: xcode10.3
+
 before_script:
   # create a build folder for the out-of-source build
   - mkdir build
