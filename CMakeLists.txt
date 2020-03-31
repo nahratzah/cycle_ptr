@@ -53,9 +53,6 @@ target_include_directories(cycle_ptr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-find_package (Boost REQUIRED)
-target_include_directories (cycle_ptr PUBLIC ${Boost_INCLUDE_DIR})
-
 install(FILES ${headers} DESTINATION "include/cycle_ptr")
 install(FILES ${headers_detail} DESTINATION "include/cycle_ptr/detail")
 install(TARGETS cycle_ptr EXPORT cycle_ptr DESTINATION "lib")
