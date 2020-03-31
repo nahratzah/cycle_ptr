@@ -38,6 +38,8 @@ jobs:
       # osx_image: xcode10.3
       addons:
         homebrew:
+          # The travis image won't do homebrew unless update is set. :/
+          update: true
           packages:
             - unittest-cpp
 
