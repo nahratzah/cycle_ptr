@@ -68,7 +68,7 @@ class cycle_base {
    * \throws std::bad_alloc If there is not enough memory to create
    * the required control block.
    */
-  cycle_base([[maybe_unused]] unowned_cycle_t unowned_tag)
+  cycle_base(unowned_cycle_t unowned_tag [[maybe_unused]])
   : control_(detail::base_control::unowned_control())
   {}
 
@@ -195,7 +195,7 @@ class cycle_member_ptr
    *
    * \param unowned_tag Tag to select ownerless construction.
    */
-  explicit cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag) noexcept
+  explicit cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]]) noexcept
   : vertex(detail::base_control::unowned_control())
   {}
 
@@ -234,7 +234,7 @@ class cycle_member_ptr
    * \param unowned_tag Tag to select ownerless construction.
    * \param nil Nullptr value.
    */
-  cycle_member_ptr(unowned_cycle_t unowned_tag, [[maybe_unused]] std::nullptr_t nil) noexcept
+  cycle_member_ptr(unowned_cycle_t unowned_tag, std::nullptr_t nil [[maybe_unused]]) noexcept
   : cycle_member_ptr(unowned_tag)
   {}
 
@@ -274,7 +274,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_member_ptr<U>& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr)
   : detail::vertex(detail::base_control::unowned_control()),
     target_(ptr.target_)
   {
@@ -363,7 +363,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_gptr<U>& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_gptr<U>& ptr)
   : detail::vertex(detail::base_control::unowned_control()),
     target_(ptr.target_)
   {
@@ -409,7 +409,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, cycle_gptr<U>&& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], cycle_gptr<U>&& ptr)
   : detail::vertex(detail::base_control::unowned_control()),
     target_(std::exchange(ptr.target_, nullptr))
   {
@@ -437,7 +437,7 @@ class cycle_member_ptr
    * This case is currently unspecified in cycle_ptr library.
    */
   template<typename U>
-  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_member_ptr<U>& ptr, element_type* target)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr, element_type* target)
   : detail::vertex(detail::base_control::unowned_control()),
     target_(target)
   {
@@ -462,7 +462,7 @@ class cycle_member_ptr
    * This case is currently unspecified in cycle_ptr library.
    */
   template<typename U>
-  cycle_member_ptr([[maybe_unused]] unowned_cycle_t unowned_tag, const cycle_gptr<U>& ptr, element_type* target)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_gptr<U>& ptr, element_type* target)
   : detail::vertex(detail::base_control::unowned_control()),
     target_(target)
   {
@@ -535,7 +535,7 @@ class cycle_member_ptr
    * \param owner The owner object of this member pointer.
    * \param nil ``nullptr``
    */
-  cycle_member_ptr(cycle_base& owner, [[maybe_unused]] std::nullptr_t nil) noexcept
+  cycle_member_ptr(cycle_base& owner, std::nullptr_t nil [[maybe_unused]]) noexcept
   : cycle_member_ptr(owner)
   {}
 
@@ -733,7 +733,7 @@ class cycle_member_ptr
    * \throws std::runtime_error If no published control block covers
    * the address range of *this.
    */
-  cycle_member_ptr([[maybe_unused]] std::nullptr_t nil) {}
+  cycle_member_ptr(std::nullptr_t nil [[maybe_unused]]) {}
 
   /**
    * \brief Constructor with automatic ownership detection.
@@ -983,7 +983,7 @@ class cycle_member_ptr
    *
    * \throws std::runtime_error if the owner of this is expired.
    */
-  auto operator=([[maybe_unused]] std::nullptr_t nil)
+  auto operator=(std::nullptr_t nil [[maybe_unused]])
   -> cycle_member_ptr& {
     reset();
     return *this;
@@ -1250,7 +1250,7 @@ class cycle_gptr {
 
   ///\brief Nullptr constructor.
   ///\post *this == nullptr
-  constexpr cycle_gptr([[maybe_unused]] std::nullptr_t nil) noexcept
+  constexpr cycle_gptr(std::nullptr_t nil [[maybe_unused]]) noexcept
   : cycle_gptr()
   {}
 
@@ -1741,7 +1741,7 @@ class cycle_weak_ptr {
   noexcept
   -> cycle_weak_ptr& {
     target_ = std::exchange(other.target_, nullptr);
-    target_ctrl_.reset(other.target_ctrl_.detach(), false);
+    target_ctrl_ = std::move(other.target_ctrl_);
     return *this;
   }
 
@@ -1762,7 +1762,7 @@ class cycle_weak_ptr {
   noexcept
   -> cycle_weak_ptr& {
     target_ = std::exchange(other.target_, nullptr);
-    target_ctrl_.reset(other.target_ctrl_.detach(), false);
+    target_ctrl_ = std::move(other.target_ctrl_);
     return *this;
   }
 
@@ -1872,7 +1872,7 @@ noexcept
 ///\brief Equality comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator==(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator==(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !x;
@@ -1881,7 +1881,7 @@ noexcept
 ///\brief Equality comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator==(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return !y;
@@ -1899,7 +1899,7 @@ noexcept
 ///\brief Inequality comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator!=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator!=(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return bool(x);
@@ -1908,7 +1908,7 @@ noexcept
 ///\brief Inequality comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator!=(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return bool(y);
@@ -1926,7 +1926,7 @@ noexcept
 ///\brief Less comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator<(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator<(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return std::less<typename cycle_member_ptr<T>::element_type*>()(x.get(), nullptr);
@@ -1935,7 +1935,7 @@ noexcept
 ///\brief Less comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator<(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return std::less<typename cycle_member_ptr<U>::element_type*>()(nullptr, y.get());
@@ -1953,7 +1953,7 @@ noexcept
 ///\brief Greater comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator>(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator>(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return nullptr < x;
@@ -1962,7 +1962,7 @@ noexcept
 ///\brief Greater comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator>(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return y < nullptr;
@@ -1980,7 +1980,7 @@ noexcept
 ///\brief Less or equal comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator<=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator<=(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(nullptr < x);
@@ -1989,7 +1989,7 @@ noexcept
 ///\brief Less or equal comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator<=(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return !(y < nullptr);
@@ -2007,7 +2007,7 @@ noexcept
 ///\brief Greater or equal comparison.
 ///\relates cycle_member_ptr
 template<typename T>
-inline auto operator>=(const cycle_member_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator>=(const cycle_member_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(x < nullptr);
@@ -2016,7 +2016,7 @@ noexcept
 ///\brief Greater or equal comparison.
 ///\relates cycle_member_ptr
 template<typename U>
-inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_member_ptr<U>& y)
+inline auto operator>=(std::nullptr_t x [[maybe_unused]], const cycle_member_ptr<U>& y)
 noexcept
 -> bool {
   return !(nullptr < y);
@@ -2054,7 +2054,7 @@ noexcept
 ///\brief Equality comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator==(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator==(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !x;
@@ -2063,7 +2063,7 @@ noexcept
 ///\brief Equality comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator==([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator==(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return !y;
@@ -2081,7 +2081,7 @@ noexcept
 ///\brief Inequality comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator!=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator!=(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return bool(x);
@@ -2090,7 +2090,7 @@ noexcept
 ///\brief Inequality comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator!=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator!=(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return bool(y);
@@ -2108,7 +2108,7 @@ noexcept
 ///\brief Less comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator<(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator<(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return std::less<typename cycle_gptr<T>::element_type*>()(x.get(), nullptr);
@@ -2117,7 +2117,7 @@ noexcept
 ///\brief Less comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator<([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator<(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return std::less<typename cycle_gptr<U>::element_type*>()(nullptr, y.get());
@@ -2135,7 +2135,7 @@ noexcept
 ///\brief Greater comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator>(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator>(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return nullptr < x;
@@ -2144,7 +2144,7 @@ noexcept
 ///\brief Greater comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator>([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator>(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return y < nullptr;
@@ -2162,7 +2162,7 @@ noexcept
 ///\brief Less or equal comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator<=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator<=(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(nullptr < x);
@@ -2171,7 +2171,7 @@ noexcept
 ///\brief Less or equal comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator<=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator<=(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return !(y < nullptr);
@@ -2189,7 +2189,7 @@ noexcept
 ///\brief Greater or equal comparison.
 ///\relates cycle_gptr
 template<typename T>
-inline auto operator>=(const cycle_gptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+inline auto operator>=(const cycle_gptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(x < nullptr);
@@ -2198,7 +2198,7 @@ noexcept
 ///\brief Greater or equal comparison.
 ///\relates cycle_gptr
 template<typename U>
-inline auto operator>=([[maybe_unused]] std::nullptr_t x, const cycle_gptr<U>& y)
+inline auto operator>=(std::nullptr_t x [[maybe_unused]], const cycle_gptr<U>& y)
 noexcept
 -> bool {
   return !(nullptr < y);

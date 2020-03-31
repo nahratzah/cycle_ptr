@@ -59,7 +59,7 @@ class cycle_allocator
   ///\param unowned_tag Tag indicating that elements created by this allocator do not have an owning object.
   ///\param args Arguments to pass to underlying allocator constructor.
   template<typename... Args, typename = std::enable_if_t<std::is_constructible_v<Nested, Args...>>>
-  explicit cycle_allocator([[maybe_unused]] unowned_cycle_t unowned_tag, Args&&... args)
+  explicit cycle_allocator(unowned_cycle_t unowned_tag [[maybe_unused]], Args&&... args)
   : Nested(std::forward<Args>(args)...),
     control_(detail::base_control::unowned_control())
   {}
@@ -121,7 +121,7 @@ class cycle_allocator
 
   ///\brief Inequality comparison.
   auto operator!=(const cycle_allocator& other) const
-  noexcept(noexcept(*this == other))
+  noexcept(noexcept(std::declval<const cycle_allocator&>() == std::declval<const cycle_allocator&>()))
   -> bool {
     return !(*this == other);
   }

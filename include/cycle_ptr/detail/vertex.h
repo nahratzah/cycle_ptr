@@ -4,6 +4,7 @@
 #include <cycle_ptr/detail/intrusive_ptr.h>
 #include <cycle_ptr/detail/llist.h>
 #include <cycle_ptr/detail/hazard.h>
+#include <memory>
 
 namespace cycle_ptr::detail {
 
@@ -20,7 +21,7 @@ class vertex
  protected:
   vertex();
 
-  vertex([[maybe_unused]] const vertex& other)
+  vertex(const vertex& other [[maybe_unused]])
   : vertex()
   {}
 

@@ -36,8 +36,6 @@ set(headers_detail
     include/cycle_ptr/detail/vertex.h
     )
 
-find_package (Boost REQUIRED)
-
 add_library (cycle_ptr
     src/vertex.cc
     src/base_control.cc
@@ -54,7 +52,6 @@ endif()
 target_include_directories(cycle_ptr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-target_include_directories (cycle_ptr PUBLIC ${Boost_INCLUDE_DIR})
 
 install(FILES ${headers} DESTINATION "include/cycle_ptr")
 install(FILES ${headers_detail} DESTINATION "include/cycle_ptr/detail")
@@ -66,7 +63,7 @@ install(FILES cycle_ptr-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/cycle_ptr-confi
 
 add_subdirectory (test)
 
-find_package(Doxygen REQUIRED mscgen OPTIONAL_COMPONENTS dot)
+find_package(Doxygen COMPONENTS mscgen OPTIONAL_COMPONENTS dot)
 
 if(DOXYGEN_FOUND)
   set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")

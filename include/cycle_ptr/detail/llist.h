@@ -370,7 +370,7 @@ class link {
    * This constructor exists so that derived classes can have a copy/move
    * constructor defaulted.
    */
-  constexpr link([[maybe_unused]] const link& other) noexcept
+  constexpr link(const link& other [[maybe_unused]]) noexcept
   : link()
   {}
 
@@ -382,7 +382,7 @@ class link {
    * This method exists so that derived classes can have a copy/move
    * assignment defaulted.
    */
-  constexpr auto operator=([[maybe_unused]] const link& other) noexcept
+  constexpr auto operator=(const link& other [[maybe_unused]]) noexcept
   -> link& {
     return *this;
   }
@@ -392,7 +392,7 @@ class link {
   ///\details Constructs link pointing at itself, turning it into the
   ///head of an empty linked list.
   ///\param lht Tag selecting this constructor.
-  link([[maybe_unused]] const llist_head_tag& lht) noexcept
+  link(const llist_head_tag& lht [[maybe_unused]]) noexcept
   : pred_(this),
     succ_(this)
   {}
