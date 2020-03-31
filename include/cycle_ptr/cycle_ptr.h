@@ -1741,7 +1741,7 @@ class cycle_weak_ptr {
   noexcept
   -> cycle_weak_ptr& {
     target_ = std::exchange(other.target_, nullptr);
-    target_ctrl_.reset(std::move(other.target_ctrl_));
+    target_ctrl_ = std::move(other.target_ctrl_);
     return *this;
   }
 
@@ -1762,7 +1762,7 @@ class cycle_weak_ptr {
   noexcept
   -> cycle_weak_ptr& {
     target_ = std::exchange(other.target_, nullptr);
-    target_ctrl_.reset(std::move(other.target_ctrl_));
+    target_ctrl_ = std::move(other.target_ctrl_);
     return *this;
   }
 
