@@ -36,9 +36,10 @@ jobs:
 
     - os: osx
       osx_image: xcode10.3
-      homebrew:
-        packages:
-	  unittest-cpp
+      addons:
+        homebrew:
+          packages:
+            - unittest-cpp
 
 before_script:
   # create a build folder for the out-of-source build
