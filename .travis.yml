@@ -156,7 +156,7 @@ before_script:
   # because the folks at ubuntu don't.
   - mkdir __fix_unit_test__
   - unit_test_cmake=${PWD}/__fix_unit_test__
-  - wget -O __fix_unit_test__/UnitTest++.cmake 'https://raw.githubusercontent.com/unittest-cpp/unittest-cpp/v2.0.0/cmake/UnitTest%2B%2BConfig.cmake'
+  - wget -O __fix_unit_test__/UnitTest++Config.cmake 'https://raw.githubusercontent.com/unittest-cpp/unittest-cpp/v2.0.0/cmake/UnitTest%2B%2BConfig.cmake'
 
   # create a build folder for the out-of-source build
   - mkdir build
