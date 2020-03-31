@@ -66,7 +66,7 @@ install(FILES cycle_ptr-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/cycle_ptr-confi
 
 add_subdirectory (test)
 
-find_package(Doxygen REQUIRED mscgen OPTIONAL_COMPONENTS dot)
+find_package(Doxygen COMPONENTS mscgen OPTIONAL_COMPONENTS dot)
 
 if(DOXYGEN_FOUND)
   set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")
