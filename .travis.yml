@@ -154,8 +154,9 @@ before_install:
 before_script:
   # We need to ensure the cmake config for UnitTest++ is installed properly,
   # because the folks at ubuntu don't.
-  - sudo mkdir -p /usr/lib/cmake/UnitTest++
-  - sudo wget -O /usr/lib/cmake/UnitTest++/UnitTest++.cmake 'https://raw.githubusercontent.com/unittest-cpp/unittest-cpp/v2.0.0/cmake/UnitTest%2B%2BConfig.cmake'
+  - mkdir __fix_unit_test__
+  - export UnitTest++_DIR="${PWD}/__fix_unit_test__"
+  - wget -O "${UnitTest++_DIR}/UnitTest++.cmake" 'https://raw.githubusercontent.com/unittest-cpp/unittest-cpp/v2.0.0/cmake/UnitTest%2B%2BConfig.cmake'
 
   # create a build folder for the out-of-source build
   - mkdir build
