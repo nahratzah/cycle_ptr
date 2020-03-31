@@ -21,7 +21,7 @@ class vertex
  protected:
   vertex();
 
-  vertex([[maybe_unused]] const vertex& other)
+  vertex(const vertex& other [[maybe_unused]])
   : vertex()
   {}
 

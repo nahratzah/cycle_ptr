@@ -544,7 +544,7 @@ class hazard_ptr {
    * \post
    * *this == nullptr
    */
-  auto operator=([[maybe_unused]] const std::nullptr_t nil)
+  auto operator=(const std::nullptr_t nil [[maybe_unused]])
   noexcept
   -> pointer {
     reset();
@@ -567,7 +567,7 @@ class hazard_ptr {
    * \post
    * *this == nullptr
    */
-  auto reset([[maybe_unused]] std::nullptr_t nil)
+  auto reset(std::nullptr_t nil [[maybe_unused]])
   noexcept
   -> void {
     hazard_t::reset(ptr_);

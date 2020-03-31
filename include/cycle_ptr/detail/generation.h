@@ -218,8 +218,8 @@ class generation {
   static auto merge0_(
       std::tuple<generation*, bool> x,
       std::tuple<generation*, bool> y,
-      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_mtx_lck,
-      [[maybe_unused]] const std::unique_lock<std::shared_mutex>& x_merge_mtx_lck) noexcept
+      const std::unique_lock<std::shared_mutex>& x_mtx_lck [[maybe_unused]],
+      const std::unique_lock<std::shared_mutex>& x_merge_mtx_lck [[maybe_unused]]) noexcept
   -> bool;
 
  public:

@@ -24,7 +24,7 @@ class intrusive_ptr {
 
   constexpr intrusive_ptr() noexcept = default;
 
-  constexpr intrusive_ptr([[maybe_unused]] std::nullptr_t nil) noexcept
+  constexpr intrusive_ptr(std::nullptr_t nil [[maybe_unused]]) noexcept
   : intrusive_ptr()
   {}
 
@@ -154,7 +154,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator==([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator==(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return !y;
@@ -163,7 +163,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator==(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator==(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !x;
@@ -199,7 +199,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator!=([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator!=(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return bool(y);
@@ -208,7 +208,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator!=(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator!=(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return bool(x);
@@ -244,7 +244,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator<([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator<(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return std::less<typename intrusive_ptr<U>::element_type*>()(nullptr, y.get());
@@ -253,7 +253,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator<(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator<(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return std::less<typename intrusive_ptr<T>::element_type*>()(x.get(), nullptr);
@@ -289,7 +289,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator>([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator>(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return y < nullptr;
@@ -298,7 +298,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator>(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator>(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return nullptr < x;
@@ -334,7 +334,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator<=([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator<=(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return !(y < nullptr);
@@ -343,7 +343,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator<=(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator<=(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(nullptr < x);
@@ -379,7 +379,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename U>
-auto operator>=([[maybe_unused]] std::nullptr_t x, const intrusive_ptr<U>& y)
+auto operator>=(std::nullptr_t x [[maybe_unused]], const intrusive_ptr<U>& y)
 noexcept
 -> bool {
   return !(nullptr < y);
@@ -388,7 +388,7 @@ noexcept
 ///\brief Comparison.
 ///\relates intrusive_ptr
 template<typename T>
-auto operator>=(const intrusive_ptr<T>& x, [[maybe_unused]] std::nullptr_t y)
+auto operator>=(const intrusive_ptr<T>& x, std::nullptr_t y [[maybe_unused]])
 noexcept
 -> bool {
   return !(x < nullptr);
