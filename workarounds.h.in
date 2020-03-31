@@ -1,0 +1,32 @@
+#ifndef CYCLE_PTR_DETAIL_WORKAROUNDS_H
+#define CYCLE_PTR_DETAIL_WORKAROUNDS_H
+
+/**
+ * \brief Cmake provides us with if the platform has hardware interference size.
+ * \details
+ * The llvm c++ library declares the feature-check-macro that says it supports
+ * the value, and then fails to implement it.
+ *
+ * So instead of using the feature test macro for this, we use the build system
+ * instead. :/
+ */
+#cmakedefine01 HAS_HARDWARE_INTERFERENCE_SIZE
+
+
+namespace cycle_ptr::detail {
+
+
+#if HAVE_HARDWARE_INTERFERENCE_SIZE
+  using std::hardware_destructive_interference_size;
+#else
+  // Any value will do, this is the default for amd64 if we remember correct.
+  inline constexpr std::size_t hardware_destructive_interference_size = 64u;
+#endif
+
+
+} /* namespace cycle_ptr::detail */
+
+
+#undef HAS_HARDWARE_INTERFERENCE_SIZE
+
+#endif /* CYCLE_PTR_DETAIL_WORKAROUNDS_H */

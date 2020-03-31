@@ -1,4 +1,3 @@
-include(CTest)
 find_package(UnitTest++)
 
 macro (do_test binary)
@@ -10,7 +9,7 @@ macro (do_test binary)
 endmacro (do_test)
 
 if (UnitTest++_FOUND)
-  enable_testing()
+  include(CTest)
 
   do_test (gptr)
   do_test (member_ptr)

@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <utility>
 #include <cycle_ptr/detail/intrusive_ptr.h>
+#include <cycle_ptr/detail/workarounds.h>
 
 namespace cycle_ptr::detail {
 
@@ -35,25 +36,13 @@ class hazard {
    * Padding is added to make the data type not only cache-line aligned,
    * but also cache-line sized.
    */
-#if __cpp_lib_hardware_interference_size >= 201703
-  struct alignas(std::hardware_destructive_interference_size) data {
-    static_assert(sizeof(std::atomic<T*>) < std::hardware_destructive_interference_size,
+  struct alignas(hardware_destructive_interference_size) data {
+    static_assert(sizeof(std::atomic<T*>) < hardware_destructive_interference_size,
         "Cycle_ptr did not expect a platform where cache line is less than or equal to a pointer.");
 
     std::atomic<T*> ptr = nullptr;
-    [[maybe_unused]] char pad_[std::hardware_destructive_interference_size - sizeof(std::atomic<T*>)];
+    [[maybe_unused]] char pad_[hardware_destructive_interference_size - sizeof(std::atomic<T*>)];
   };
-#elif defined(__amd64__) || defined(__x86_64__)
-  struct alignas(64) data {
-    static_assert(sizeof(std::atomic<T*>) < 64,
-        "Cycle_ptr did not expect a platform where cache line is less than or equal to a pointer.");
-
-    std::atomic<T*> ptr = nullptr;
-    [[maybe_unused]] char pad_[64 - sizeof(std::atomic<T*>)];
-  };
-#else
-# error No fallback for your architecture, sorry.
-#endif
 
   /**
    * \brief List of hazard pointers.

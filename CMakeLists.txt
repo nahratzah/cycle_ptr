@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 project (cycle_ptr)
+enable_testing()
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
@@ -17,6 +18,22 @@ elseif(STD_CXX1Z)
 else()
   message(WARNING "Cannot figure out how to enable C++17 on compiler.")
 endif()
+
+# Set up flags for the C++ feature test macro.
+if(STD_CXX17)
+  set (CMAKE_REQUIRED_FLAGS "-std=c++17")
+elseif(STD_CXX1Z)
+  set (CMAKE_REQUIRED_FLAGS "-std=c++1z")
+endif()
+
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(std::hardware_destructive_interference_size "new" HAS_HARDWARE_INTERFERENCE_SIZE)
+mark_as_advanced(HAS_HARDWARE_INTERFERENCE_SIZE)
+
+# Unset the flags.
+# Otherwise the thread-check below may fail (because it is a C-language test,
+# while our options are C++ options).
+unset(CMAKE_REQUIRED_FLAGS)
 
 set(headers
     include/cycle_ptr/allocator.h
@@ -50,6 +67,10 @@ endif()
 target_include_directories(cycle_ptr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+configure_file(workarounds.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/cycle_ptr/detail/workarounds.h @ONLY)
+target_include_directories(cycle_ptr PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/cycle_ptr/detail/workarounds.h DESTINATION "include/cycle_ptr/detail")
 
 install(FILES ${headers} DESTINATION "include/cycle_ptr")
 install(FILES ${headers_detail} DESTINATION "include/cycle_ptr/detail")
