@@ -121,7 +121,7 @@ class cycle_allocator
 
   ///\brief Inequality comparison.
   auto operator!=(const cycle_allocator& other) const
-  noexcept(noexcept(*this == other))
+  noexcept(noexcept(std::declval<const cycle_allocator&>() == std::declval<const cycle_allocator&>()))
   -> bool {
     return !(*this == other);
   }
