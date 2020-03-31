@@ -57,7 +57,6 @@ add_library (cycle_ptr
     src/generation.cc
     )
 set_property (TARGET cycle_ptr PROPERTY VERSION ${CYCLE_PTR_VERSION})
-set_property (TARGET cycle_ptr PROPERTY SOVERSION "0.0")
 
 find_package (Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
