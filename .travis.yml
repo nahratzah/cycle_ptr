@@ -14,7 +14,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
 
@@ -29,7 +29,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
          - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
@@ -44,7 +44,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
@@ -59,7 +59,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
@@ -75,7 +75,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
 
@@ -91,7 +91,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-3.7 && CXX=clang++-3.7"
 
@@ -107,7 +107,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
 
@@ -122,7 +122,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
 
@@ -137,7 +137,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
@@ -152,7 +152,7 @@ jobs:
             - cmake-data
             - cmake
             - libboost-all-dev
-            - libunittest++-dev
+            - libunittest++2
       env:
         - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
