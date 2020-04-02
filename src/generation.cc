@@ -218,7 +218,7 @@ noexcept
     // Clear GC request flag, signalling that GC has started.
     // (We do this after acquiring initial locks, so that multiple threads can
     // forego their GC invocation.)
-    gc_flag_.clear(std::memory_order_acq_rel);
+    gc_flag_.clear(std::memory_order_seq_cst);
 
     // Prepare (mark phase).
     controls_list::iterator wavefront_end = gc_mark_();

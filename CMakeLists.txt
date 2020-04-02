@@ -8,32 +8,36 @@ set(CYCLE_PTR_VERSION_MAJOR 0 CACHE STRING "major version" FORCE)
 set(CYCLE_PTR_VERSION_MINOR 4 CACHE STRING "minor version" FORCE)
 set(CYCLE_PTR_VERSION ${CYCLE_PTR_VERSION_MAJOR}.${CYCLE_PTR_VERSION_MINOR} CACHE STRING "version" FORCE)
 
-include (CheckCXXCompilerFlag)
-check_cxx_compiler_flag ("-std=c++17" STD_CXX17)
-check_cxx_compiler_flag ("-std=c++1z" STD_CXX1Z)
-if(STD_CXX17)
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-elseif(STD_CXX1Z)
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-else()
-  message(WARNING "Cannot figure out how to enable C++17 on compiler.")
-endif()
+# On windows, DLLs must be either in the search path, or in the same directory as the executable.
+# Since our test binaries are in a subdirectory, our tests fail under windows because they can't load the DLL.
+# In order to sidestep that, we use the CMAKE_RUNTIME_OUTPUT_DIRECTORY to get all executables into the same directory.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-# Set up flags for the C++ feature test macro.
-if(STD_CXX17)
-  set (CMAKE_REQUIRED_FLAGS "-std=c++17")
-elseif(STD_CXX1Z)
-  set (CMAKE_REQUIRED_FLAGS "-std=c++1z")
+include (CheckCXXCompilerFlag)
+if(WIN32)
+  check_cxx_compiler_flag ("/std:c++17" STD_CXX17)
+  if(STD_CXX17)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+  else()
+    message(WARNING "Cannot figure out how to enable C++17 on compiler.")
+  endif()
+else()
+  check_cxx_compiler_flag ("-std=c++17" STD_CXX17)
+  check_cxx_compiler_flag ("-std=c++1z" STD_CXX1Z)
+  if(STD_CXX17)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+  elseif(STD_CXX1Z)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+  else()
+    message(WARNING "Cannot figure out how to enable C++17 on compiler.")
+  endif()
 endif()
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(std::hardware_destructive_interference_size "new" HAS_HARDWARE_INTERFERENCE_SIZE)
 mark_as_advanced(HAS_HARDWARE_INTERFERENCE_SIZE)
-
-# Unset the flags.
-# Otherwise the thread-check below may fail (because it is a C-language test,
-# while our options are C++ options).
-unset(CMAKE_REQUIRED_FLAGS)
 
 set(headers
     include/cycle_ptr/allocator.h

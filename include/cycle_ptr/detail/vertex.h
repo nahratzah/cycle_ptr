@@ -1,6 +1,7 @@
 #ifndef CYCLE_PTR_DETAIL_VERTEX_H
 #define CYCLE_PTR_DETAIL_VERTEX_H
 
+#include <cycle_ptr/detail/export_.h>
 #include <cycle_ptr/detail/intrusive_ptr.h>
 #include <cycle_ptr/detail/llist.h>
 #include <cycle_ptr/detail/hazard.h>
@@ -19,15 +20,19 @@ class vertex
   friend class base_control;
 
  protected:
+  cycle_ptr_export_
   vertex();
 
   vertex(const vertex& other [[maybe_unused]])
   : vertex()
   {}
 
+  cycle_ptr_export_
   explicit vertex(intrusive_ptr<base_control> bc) noexcept;
+  cycle_ptr_export_
   ~vertex() noexcept;
 
+  cycle_ptr_export_
   auto reset() -> void;
 
   /**
@@ -42,6 +47,7 @@ class vertex
    * Note that this must be set, if has_reference is set.
    * (Ignored for null new_dst.)
    */
+  cycle_ptr_export_
   auto reset(
       intrusive_ptr<base_control> new_dst,
       bool has_reference,
@@ -49,6 +55,7 @@ class vertex
   -> void;
 
   ///\brief Test if origin is expired.
+  cycle_ptr_export_
   auto owner_is_expired() const noexcept -> bool;
 
   ///\brief Throw exception if owner is expired.
@@ -63,6 +70,7 @@ class vertex
  public:
   ///\brief Read the target control block.
   ///\returns The target control block of this vertex.
+  cycle_ptr_export_
   auto get_control() const noexcept -> intrusive_ptr<base_control>;
 
  private:

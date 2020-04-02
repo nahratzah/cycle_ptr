@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <utility>
+#include <cycle_ptr/detail/export_.h>
 #include <cycle_ptr/detail/color.h>
 #include <cycle_ptr/detail/base_control.h>
 #include <cycle_ptr/detail/intrusive_ptr.h>
@@ -17,7 +18,7 @@ namespace cycle_ptr::detail {
 
 
 class generation {
-  friend class cycle_ptr::gc_operation;
+  friend cycle_ptr::gc_operation;
 
   friend auto intrusive_ptr_add_ref(generation* g)
   noexcept
@@ -92,6 +93,7 @@ class generation {
  private:
   static constexpr std::uintmax_t moveable_seq = 0x1;
 
+  cycle_ptr_export_
   static auto new_seq_() noexcept -> std::uintmax_t;
 
  public:
@@ -101,6 +103,7 @@ class generation {
     return seq_.load(std::memory_order_relaxed);
   }
 
+  cycle_ptr_export_
   auto gc() noexcept -> void;
 
   /**
@@ -113,6 +116,7 @@ class generation {
    *
    * \returns A lock to hold while creating the edge.
    */
+  cycle_ptr_export_
   static auto fix_ordering(base_control& src, base_control& dst) noexcept
   -> std::shared_lock<std::shared_mutex>;
 
@@ -131,6 +135,7 @@ class generation {
    *   hence why we *must* run it unlocked, otherwise we would get
    *   inter generation lock ordering problems.
    */
+  cycle_ptr_export_
   auto gc_() noexcept -> void;
 
   /**
@@ -144,6 +149,7 @@ class generation {
    * but haven't had their edges processed.
    * All elements after the returned iterator may or may not be reachable.
    */
+  cycle_ptr_export_
   auto gc_mark_() noexcept -> controls_list::iterator;
 
   /**
@@ -152,6 +158,7 @@ class generation {
    * Extends the wavefront in ``[controls_.begin(), b)`` with anything
    * non-red after \p b.
    */
+  cycle_ptr_export_
   auto gc_phase2_mark_(controls_list::iterator b) noexcept
   -> controls_list::iterator;
 
@@ -165,6 +172,7 @@ class generation {
    * Elements before the iterator are known reachable.
    * Elements after are not reachable (but note that red-promotion may make them reachable).
    */
+  cycle_ptr_export_
   auto gc_sweep_(controls_list::iterator wavefront_end) noexcept
   -> controls_list::iterator;
 
@@ -174,6 +182,7 @@ class generation {
    * In phase 2, weak red promotion is no longer allowed.
    * \returns End partition iterator of reachable set.
    */
+  cycle_ptr_export_
   auto gc_phase2_sweep_(controls_list::iterator wavefront_end) noexcept
   -> controls_list::iterator;
 
@@ -188,6 +197,7 @@ class generation {
    * \param x,y Generations to merge.
    * \returns Pointer to the merged generation.
    */
+  cycle_ptr_export_
   static auto merge_(
       std::tuple<intrusive_ptr<generation>, bool> src_tpl,
       std::tuple<intrusive_ptr<generation>, bool> dst_tpl) noexcept
@@ -215,6 +225,7 @@ class generation {
    * \returns True if \p y needs to be GC'd by caller.
    */
   [[nodiscard]]
+  cycle_ptr_export_
   static auto merge0_(
       std::tuple<generation*, bool> x,
       std::tuple<generation*, bool> y,

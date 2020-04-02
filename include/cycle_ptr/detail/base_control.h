@@ -66,14 +66,18 @@ class base_control
   class publisher;
 
   ///\brief Default constructor allocates a new generation.
+  cycle_ptr_export_
   base_control();
   ///\brief Constructor to use a specific generation.
+  cycle_ptr_export_
   base_control(intrusive_ptr<generation> g) noexcept;
   ///\brief Destructor.
+  cycle_ptr_export_
   ~base_control() noexcept;
 
  public:
   ///\brief Create a control block that represents no ownership.
+  cycle_ptr_export_
   static auto unowned_control() -> intrusive_ptr<base_control>;
 
   ///\brief Test if the object managed by this control is expired.
@@ -88,6 +92,7 @@ class base_control
 
   ///\brief Used by weak to strong reference promotion.
   ///\return True if promotion succeeded, false otherwise.
+  cycle_ptr_export_
   auto weak_acquire() noexcept -> bool;
 
   /**
@@ -114,6 +119,7 @@ class base_control
    *
    * May only be called on reachable instances of this.
    */
+  cycle_ptr_export_
   auto acquire() noexcept -> void;
 
   /**
@@ -140,6 +146,7 @@ class base_control
   /**
    * \brief Run GC.
    */
+  cycle_ptr_export_
   auto gc() noexcept -> void;
 
   ///\brief Register a vertex.
@@ -159,6 +166,7 @@ class base_control
   }
 
   ///\brief Test if this control block represents an unowned object.
+  cycle_ptr_export_
   virtual auto is_unowned() const noexcept -> bool;
 
  private:
@@ -268,8 +276,10 @@ class base_control::publisher {
 
  public:
   ///\brief Publish a base_control for an object at the given address.
+  cycle_ptr_export_
   publisher(void* addr, std::size_t len, base_control& bc);
   ///\brief Destructor, unpublishes the range.
+  cycle_ptr_export_
   ~publisher() noexcept;
 
   ///\brief Perform a lookup, to figure out which control manages the given address range.
@@ -279,6 +289,7 @@ class base_control::publisher {
   ///\param[in] len Sizeof the object for which to find a base control.
   ///\returns Base control owning the argument address range.
   ///\throws std::runtime_error if no pushlished range covers the argument range.
+  cycle_ptr_export_
   static auto lookup(void* addr, std::size_t len) -> intrusive_ptr<base_control>;
 
  private:
@@ -293,6 +304,7 @@ class base_control::publisher {
    *
    * \returns Map for range publication, with its associated mutex.
    */
+  cycle_ptr_export_
   static auto singleton_map_() noexcept
   -> std::tuple<std::shared_mutex&, map_type&>;
 
