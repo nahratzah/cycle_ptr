@@ -1,4 +1,4 @@
-find_package(UnitTest++ REQUIRED)
+find_package(UnitTest++)
 
 macro (do_test binary)
   add_executable (test_${binary} ${binary}.cc)
