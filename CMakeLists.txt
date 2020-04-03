@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.8)
 project (cycle_ptr)
 enable_testing()
 
@@ -14,26 +14,6 @@ set(CYCLE_PTR_VERSION ${CYCLE_PTR_VERSION_MAJOR}.${CYCLE_PTR_VERSION_MINOR} CACH
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-include (CheckCXXCompilerFlag)
-if(WIN32)
-  check_cxx_compiler_flag ("/std:c++17" STD_CXX17)
-  if(STD_CXX17)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
-  else()
-    message(WARNING "Cannot figure out how to enable C++17 on compiler.")
-  endif()
-else()
-  check_cxx_compiler_flag ("-std=c++17" STD_CXX17)
-  check_cxx_compiler_flag ("-std=c++1z" STD_CXX1Z)
-  if(STD_CXX17)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-  elseif(STD_CXX1Z)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-  else()
-    message(WARNING "Cannot figure out how to enable C++17 on compiler.")
-  endif()
-endif()
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(std::hardware_destructive_interference_size "new" HAS_HARDWARE_INTERFERENCE_SIZE)
@@ -61,6 +41,8 @@ add_library (cycle_ptr
     src/generation.cc
     )
 set_property (TARGET cycle_ptr PROPERTY VERSION ${CYCLE_PTR_VERSION})
+target_compile_features (cycle_ptr PUBLIC cxx_std_17)
+set_target_properties (cycle_ptr PROPERTIES CXX_EXTENSIONS OFF)
 
 find_package (Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
