@@ -8,13 +8,16 @@ jobs:
     - env:
         - CXX=g++
         - SUDO="sudo"
+        - CMAKE_BUILD_TYPE=Debug
     - env:
         - CXX=clang++
         - SUDO="sudo"
+        - CMAKE_BUILD_TYPE=Debug
     - os: osx
       osx_image: xcode9.4
       env:
         - SUDO="sudo"
+        - CMAKE_BUILD_TYPE=Debug
     - os: windows
       env:
         - CMAKE_OPTS="-DCMAKE_INSTALL_PREFIX=${HOME}/dependencies -DCMAKE_PREFIX_PATH=${HOME}/dependencies"
