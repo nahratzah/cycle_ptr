@@ -5,7 +5,7 @@ enable_testing()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(CYCLE_PTR_VERSION_MAJOR 0 CACHE STRING "major version" FORCE)
-set(CYCLE_PTR_VERSION_MINOR 4 CACHE STRING "minor version" FORCE)
+set(CYCLE_PTR_VERSION_MINOR 5 CACHE STRING "minor version" FORCE)
 set(CYCLE_PTR_VERSION ${CYCLE_PTR_VERSION_MAJOR}.${CYCLE_PTR_VERSION_MINOR} CACHE STRING "version" FORCE)
 
 # On windows, DLLs must be either in the search path, or in the same directory as the executable.
