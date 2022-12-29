@@ -28,9 +28,9 @@ vertex::~vertex() noexcept {
 }
 
 auto vertex::reset()
+noexcept
 -> void {
-  throw_if_owner_expired();
-
+  if (owner_is_expired()) return; // Reset is a noop when expired.
   if (dst_ == nullptr) return;
 
   intrusive_ptr<generation> src_gen = bc_->generation_.load();
@@ -62,12 +62,17 @@ auto vertex::reset(
     intrusive_ptr<base_control> new_dst,
     bool has_reference,
     bool no_red_promotion)
+noexcept
 -> void {
-  throw_if_owner_expired();
-
   assert(!has_reference || no_red_promotion);
 
-  // Need to special case this, because below we release ````dst_``.
+  if (owner_is_expired()) [[unlikely]] { // Reset is a noop when expired.
+    // Clear reference if we hold one.
+    if (new_dst != nullptr && has_reference) new_dst->release();
+    return;
+  }
+
+  // Need to special case this, because below we release ```dst_```.
   if (dst_ == new_dst) {
     if (new_dst != nullptr && has_reference) new_dst->release();
     return;
