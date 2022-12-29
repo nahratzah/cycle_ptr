@@ -82,8 +82,21 @@ class cycle_base {
    *
    * \throws std::runtime_error if no range was published.
    */
-  cycle_base(const cycle_base&)
-  noexcept
+  cycle_base([[maybe_unused]] const cycle_base&)
+  : cycle_base()
+  {}
+
+  /**
+   * \brief Move constructor.
+   * \details
+   * Provided so that you don't lose the default move constructor semantics,
+   * but keep in mind that this constructor simply invokes the default constructor.
+   *
+   * \note A copy has a different, automatically deduced, control block.
+   *
+   * \throws std::runtime_error if no range was published.
+   */
+  cycle_base([[maybe_unused]] cycle_base&&)
   : cycle_base()
   {}
 
@@ -92,7 +105,18 @@ class cycle_base {
    * \details
    * A noop, provided so you don't lose default assignment in derived classes.
    */
-  auto operator=(const cycle_base&)
+  auto operator=([[maybe_unused]] const cycle_base&)
+  noexcept
+  -> cycle_base& {
+    return *this;
+  }
+
+  /**
+   * \brief Move assignment.
+   * \details
+   * A noop, provided so you don't lose default assignment in derived classes.
+   */
+  auto operator=([[maybe_unused]] cycle_base&&)
   noexcept
   -> cycle_base& {
     return *this;
@@ -274,12 +298,15 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr) noexcept
   : detail::vertex(detail::base_control::unowned_control()),
     target_(ptr.target_)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -321,7 +348,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr(unowned_cycle_t unowned_tag, cycle_member_ptr<U>&& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag, cycle_member_ptr<U>&& ptr) noexcept
   : cycle_member_ptr(unowned_tag, ptr)
   {
     ptr.reset();
@@ -363,7 +390,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_gptr<U>& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_gptr<U>& ptr) noexcept
   : detail::vertex(detail::base_control::unowned_control()),
     target_(ptr.target_)
   {
@@ -409,7 +436,7 @@ class cycle_member_ptr
    * \param ptr Initialize to point at this same object.
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], cycle_gptr<U>&& ptr)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], cycle_gptr<U>&& ptr) noexcept
   : detail::vertex(detail::base_control::unowned_control()),
     target_(std::exchange(ptr.target_, nullptr))
   {
@@ -429,20 +456,21 @@ class cycle_member_ptr
    * \post
    * this->get() == target
    *
-   * \throws std::bad_weak_ptr If ptr is owned by an expired owner.
-   *
    * \bug It looks like std::shared_ptr allows similar aliases to be
    * constructed without \p ptr having ownership of anything, yet still
    * pointing at \p target.
    * This case is currently unspecified in cycle_ptr library.
    */
   template<typename U>
-  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr, element_type* target)
+  cycle_member_ptr(unowned_cycle_t unowned_tag [[maybe_unused]], const cycle_member_ptr<U>& ptr, element_type* target) noexcept
   : detail::vertex(detail::base_control::unowned_control()),
     target_(target)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -555,8 +583,11 @@ class cycle_member_ptr
   : detail::vertex(owner.control_),
     target_(ptr.target_)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -648,8 +679,11 @@ class cycle_member_ptr
   : detail::vertex(owner.control_),
     target_(target)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -756,8 +790,11 @@ class cycle_member_ptr
   cycle_member_ptr(const cycle_member_ptr& ptr)
   : target_(ptr.target_)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -809,8 +846,11 @@ class cycle_member_ptr
   cycle_member_ptr(const cycle_member_ptr<U>& ptr)
   : target_(ptr.target_)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -921,8 +961,11 @@ class cycle_member_ptr
   cycle_member_ptr(const cycle_member_ptr<U>& ptr, element_type* target)
   : target_(target)
   {
-    ptr.throw_if_owner_expired();
-    this->detail::vertex::reset(ptr.get_control(), false, false);
+    if (ptr.owner_is_expired()) {
+      target_ = nullptr;
+    } else {
+      this->detail::vertex::reset(ptr.get_control(), false, false);
+    }
   }
 
   /**
@@ -984,6 +1027,7 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of this is expired.
    */
   auto operator=(std::nullptr_t nil [[maybe_unused]])
+  noexcept
   -> cycle_member_ptr& {
     reset();
     return *this;
@@ -998,11 +1042,14 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of other is expired.
    */
   auto operator=(const cycle_member_ptr& other)
+  noexcept
   -> cycle_member_ptr& {
-    other.throw_if_owner_expired();
-
-    this->detail::vertex::reset(other.get_control(), false, false);
-    target_ = other.target_;
+    if (other.owner_is_expired()) {
+      reset();
+    } else {
+      this->detail::vertex::reset(other.get_control(), false, false);
+      target_ = other.target_;
+    }
     return *this;
   }
 
@@ -1018,6 +1065,7 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of other is expired.
    */
   auto operator=(cycle_member_ptr&& other)
+  noexcept
   -> cycle_member_ptr& {
     if (this != &other) [[likely]] {
       *this = other;
@@ -1036,11 +1084,14 @@ class cycle_member_ptr
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
+  noexcept
   -> cycle_member_ptr& {
-    other.throw_if_owner_expired();
-
-    this->detail::vertex::reset(other.get_control(), false, false);
-    target_ = other.target_;
+    if (other.owner_is_expired()) {
+      reset();
+    } else {
+      this->detail::vertex::reset(other.get_control(), false, false);
+      target_ = other.target_;
+    }
     return *this;
   }
 
@@ -1057,6 +1108,7 @@ class cycle_member_ptr
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_member_ptr<U>&& other)
+  noexcept
   -> cycle_member_ptr& {
     *this = other;
     other.reset();
@@ -1072,6 +1124,7 @@ class cycle_member_ptr
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_gptr<U>& other)
+  noexcept
   -> cycle_member_ptr& {
     this->detail::vertex::reset(other.target_ctrl_, false, true);
     target_ = other.target_;
@@ -1090,6 +1143,7 @@ class cycle_member_ptr
    */
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(cycle_gptr<U>&& other)
+  noexcept
   -> cycle_member_ptr& {
     this->detail::vertex::reset(
         std::move(other.target_ctrl_),
@@ -1106,6 +1160,7 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of this is expired.
    */
   auto reset()
+  noexcept
   -> void {
     this->detail::vertex::reset();
     target_ = nullptr;
@@ -1121,6 +1176,7 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of other is expired.
    */
   auto swap(cycle_member_ptr& other)
+  noexcept
   -> void {
     std::tie(*this, other) = std::forward_as_tuple(
         cycle_gptr<T>(std::move(other)),
@@ -1137,6 +1193,7 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of other is expired.
    */
   auto swap(cycle_gptr<T>& other)
+  noexcept
   -> void {
     std::tie(*this, other) = std::forward_as_tuple(
         cycle_gptr<T>(std::move(other)),
@@ -1148,8 +1205,10 @@ class cycle_member_ptr
    * \throws std::runtime_error if the owner of this is expired.
    */
   auto get() const
+  noexcept
   -> T* {
-    throw_if_owner_expired();
+    if (owner_is_expired()) [[unlikely]]
+      return nullptr;
     return target_;
   }
 
@@ -1161,6 +1220,7 @@ class cycle_member_ptr
    */
   template<bool Enable = !std::is_void_v<T>>
   auto operator*() const
+  noexcept
   -> std::enable_if_t<Enable, T>& {
     assert(get() != nullptr);
     return *get();
@@ -1174,6 +1234,7 @@ class cycle_member_ptr
    */
   template<bool Enable = !std::is_void_v<T>>
   auto operator->() const
+  noexcept
   -> std::enable_if_t<Enable, T>* {
     assert(get() != nullptr);
     return get();
@@ -1184,7 +1245,8 @@ class cycle_member_ptr
    * \returns get() != nullptr
    * \throws std::runtime_error if the owner of this is expired.
    */
-  explicit operator bool() const {
+  explicit operator bool() const
+  noexcept {
     return get() != nullptr;
   }
 
@@ -1318,8 +1380,12 @@ class cycle_gptr {
   : target_(other.target_),
     target_ctrl_(other.get_control())
   {
-    other.throw_if_owner_expired();
-    if (target_ctrl_ != nullptr) target_ctrl_->acquire();
+    if (other.owner_is_expired()) {
+      target_ = nullptr;
+      target_ctrl_.reset();
+    } else if (target_ctrl_ != nullptr) {
+      target_ctrl_->acquire();
+    }
   }
 
   /**
@@ -1370,8 +1436,12 @@ class cycle_gptr {
   : target_(target),
     target_ctrl_(other.get_control())
   {
-    other.throw_if_owner_expired();
-    if (target_ctrl_ != nullptr) target_ctrl_->acquire();
+    if (other.owner_is_expired()) {
+      target_ = nullptr;
+      target_ctrl_.reset();
+    } else {
+      if (target_ctrl_ != nullptr) target_ctrl_->acquire();
+    }
   }
 
   /**
@@ -1478,14 +1548,16 @@ class cycle_gptr {
   template<typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
   auto operator=(const cycle_member_ptr<U>& other)
   -> cycle_gptr& {
-    other.throw_if_owner_expired();
+    if (other.owner_is_expired()) {
+      reset();
+    } else {
+      detail::intrusive_ptr<detail::base_control> bc = other.get_control();
+      if (bc != nullptr) bc->acquire();
 
-    detail::intrusive_ptr<detail::base_control> bc = other.get_control();
-    if (bc != nullptr) bc->acquire();
-
-    target_ = other.target_;
-    bc.swap(target_ctrl_);
-    if (bc != nullptr) bc->release(bc == target_ctrl_);
+      target_ = other.target_;
+      bc.swap(target_ctrl_);
+      if (bc != nullptr) bc->release(bc == target_ctrl_);
+    }
 
     return *this;
   }

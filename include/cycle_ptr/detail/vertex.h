@@ -33,7 +33,7 @@ class vertex
   ~vertex() noexcept;
 
   cycle_ptr_export_
-  auto reset() -> void;
+  auto reset() noexcept -> void;
 
   /**
    * \brief Assign a new \p new_dst.
@@ -51,21 +51,12 @@ class vertex
   auto reset(
       intrusive_ptr<base_control> new_dst,
       bool has_reference,
-      bool no_red_promotion)
+      bool no_red_promotion) noexcept
   -> void;
 
   ///\brief Test if origin is expired.
   cycle_ptr_export_
   auto owner_is_expired() const noexcept -> bool;
-
-  ///\brief Throw exception if owner is expired.
-  ///\details
-  ///It is not allowed to read member pointers from an expired object.
-  ///\todo Create dedicated exception for this case.
-  auto throw_if_owner_expired() const
-  -> void {
-    if (owner_is_expired()) throw std::bad_weak_ptr();
-  }
 
  public:
   ///\brief Read the target control block.
