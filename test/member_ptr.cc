@@ -160,6 +160,71 @@ TEST(move_seq) {
   auto ooc = make_cycle<owner_of_collection>(pointers.cbegin(), pointers.cend());
 }
 
+TEST(expired_can_assign) {
+  struct testclass {
+    bool* td_ptr;
+    cycle_member_ptr<create_destroy_check> ptr;
+
+    explicit testclass(bool* td_ptr) : td_ptr(td_ptr) {}
+    ~testclass() { // Test runs during the destructor.
+      ptr = make_cycle<create_destroy_check>(td_ptr);
+      CHECK_EQUAL(nullptr, ptr);
+    }
+  };
+
+  bool destroyed = false;
+  auto tc = make_cycle<testclass>(&destroyed);
+  REQUIRE CHECK(tc != nullptr);
+  tc.reset();
+  REQUIRE CHECK(tc == nullptr);
+
+  CHECK(destroyed);
+}
+
+TEST(expired_can_reset) {
+  struct testclass {
+    cycle_member_ptr<int> ptr;
+
+    testclass()
+    : ptr(make_cycle<int>())
+    {}
+
+    ~testclass() { // Test runs during the destructor.
+      CHECK_EQUAL(nullptr, ptr);
+      ptr.reset(); // We don't guarantee a specific moment of destruction.
+      CHECK_EQUAL(nullptr, ptr);
+    }
+  };
+
+  auto tc = make_cycle<testclass>();
+  REQUIRE CHECK(tc != nullptr);
+  tc.reset();
+  REQUIRE CHECK(tc == nullptr);
+}
+
+TEST(expired_can_create_gptr_but_wont_resurrect) {
+  struct testclass {
+    cycle_gptr<int>& gptr;
+    cycle_member_ptr<int> ptr;
+
+    testclass(cycle_gptr<int>& gptr)
+    : gptr(gptr),
+      ptr(make_cycle<int>())
+    {}
+
+    ~testclass() { // Test runs during the destructor.
+      gptr = ptr; // Because `ptr` is expired, gptr will be set to null.
+    }
+  };
+
+  cycle_gptr<int> gptr = make_cycle<int>(42);
+  auto tc = make_cycle<testclass>(gptr);
+  REQUIRE CHECK(tc != nullptr);
+  tc.reset();
+  REQUIRE CHECK(tc == nullptr);
+  CHECK_EQUAL(nullptr, gptr);
+}
+
 int main() {
   return UnitTest::RunAllTests();
 }
