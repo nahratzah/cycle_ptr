@@ -143,7 +143,7 @@ class hazard {
         // We want only 1.
         release_(target);
       }
-      return pointer(target, false);
+      return pointer(target, false); // NOLINT (clang-tidy doesn't read the above comment about 2 references, and thinks this is a use-after-free.)
     }
   }
 

@@ -15,6 +15,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
+find_program(CLANG_TIDY_BINARY clang-tidy14)
+if (CLANG_TIDY_BINARY)
+  set(CMAKE_CXX_CLANG_TIDY
+    ${CLANG_TIDY_BINARY};
+    --format-style='file';
+    --header-filter=${CMAKE_CURRENT_SOURCE_DIR};
+    --use-color;
+  )
+endif ()
+
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(std::hardware_destructive_interference_size "new" HAS_HARDWARE_INTERFERENCE_SIZE)
 mark_as_advanced(HAS_HARDWARE_INTERFERENCE_SIZE)
