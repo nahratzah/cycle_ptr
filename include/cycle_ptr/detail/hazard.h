@@ -245,7 +245,7 @@ class hazard {
    * \details
    * Clears the store pointer and returns the previous value.
    */
-  static auto exchange(std::atomic<T*>& ptr, std::nullptr_t new_value)
+  static auto exchange(std::atomic<T*>& ptr, [[maybe_unused]] std::nullptr_t new_value)
   noexcept
   -> pointer {
     T*const rv = ptr.exchange(nullptr, std::memory_order_acq_rel);
@@ -533,7 +533,7 @@ class hazard_ptr {
    * \post
    * *this == nullptr
    */
-  auto operator=(const std::nullptr_t nil [[maybe_unused]])
+  auto operator=([[maybe_unused]] const std::nullptr_t nil)
   noexcept
   -> pointer {
     reset();
@@ -556,7 +556,7 @@ class hazard_ptr {
    * \post
    * *this == nullptr
    */
-  auto reset(std::nullptr_t nil [[maybe_unused]])
+  auto reset([[maybe_unused]] std::nullptr_t nil)
   noexcept
   -> void {
     hazard_t::reset(ptr_);
