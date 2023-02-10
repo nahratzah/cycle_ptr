@@ -1459,7 +1459,7 @@ class hazard {
     }
 
     if (std::exchange(two_refs, false)) release_(ptr);
-    release_(ptr);
+    release_(ptr); // NOLINT (clang-tidy doesn't read the above comment about 2 references, and thinks this is a use-after-free.)
     ptr = nullptr;
   }
 
