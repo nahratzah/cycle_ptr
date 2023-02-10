@@ -1,4 +1,4 @@
-#include <cycle_ptr/cycle_ptr.h>
+#include <cycle_ptr.h>
 #include "UnitTest++/UnitTest++.h"
 
 using namespace cycle_ptr;
@@ -29,7 +29,7 @@ struct csc_container {
   int foo = 4;
 };
 
-TEST(constructor) {
+TEST(gptr_constructor) {
   CHECK(make_cycle<int>(4) != nullptr);
 }
 
@@ -76,8 +76,4 @@ TEST(alias) {
 
   alias = nullptr;
   CHECK(destroyed);
-}
-
-int main() {
-  return UnitTest::RunAllTests();
 }

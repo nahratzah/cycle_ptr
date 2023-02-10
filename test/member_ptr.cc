@@ -1,5 +1,4 @@
-#include <cycle_ptr/cycle_ptr.h>
-#include <cycle_ptr/allocator.h>
+#include <cycle_ptr.h>
 #include "UnitTest++/UnitTest++.h"
 #include <vector>
 
@@ -80,7 +79,7 @@ class owner_of_collection
   vector_type data;
 };
 
-TEST(constructor) {
+TEST(member_ptr_constructor) {
   bool owner_destroyed = false;
   bool target_destroyed = false;
   CHECK(make_cycle<owner>(&owner_destroyed, &target_destroyed)->target != nullptr);
@@ -223,8 +222,4 @@ TEST(expired_can_create_gptr_but_wont_resurrect) {
   tc.reset();
   REQUIRE CHECK(tc == nullptr);
   CHECK_EQUAL(nullptr, gptr);
-}
-
-int main() {
-  return UnitTest::RunAllTests();
 }

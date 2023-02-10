@@ -1,19 +1,12 @@
 find_package(UnitTest++)
 
-macro (do_test binary)
-  add_executable (test_${binary} ${binary}.cc)
-  target_link_libraries (test_${binary} cycle_ptr)
-  target_link_libraries (test_${binary} UnitTest++)
-  target_include_directories (test_${binary} PUBLIC ${UTPP_INCLUDE_DIRS})
-  target_compile_features (test_${binary} PUBLIC cxx_std_17)
-  set_target_properties (test_${binary} PROPERTIES CXX_EXTENSIONS OFF)
-
-  add_test (NAME ${binary} COMMAND $<TARGET_FILE:test_${binary}>)
-endmacro (do_test)
-
 if (UnitTest++_FOUND)
-  include(CTest)
+  add_executable (tests test.cc gptr.cc member_ptr.cc)
+  target_link_libraries (tests cycle_ptr)
+  target_link_libraries (tests UnitTest++)
+  target_include_directories (tests PUBLIC ${UTPP_INCLUDE_DIRS})
+  target_compile_features (tests PUBLIC cxx_std_17)
+  set_target_properties (tests PROPERTIES CXX_EXTENSIONS OFF)
 
-  do_test (gptr)
-  do_test (member_ptr)
+  add_test (NAME tests COMMAND $<TARGET_FILE:tests>)
 endif ()
