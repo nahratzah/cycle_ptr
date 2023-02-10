@@ -17,13 +17,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <cassert>
-#include <cstddef>
-#include <memory>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <iosfwd>
 
 namespace cycle_ptr {
 template<typename> class cycle_allocator;
