@@ -1280,11 +1280,9 @@ noexcept
 }
 
 
-#ifdef __cpp_lib_hardware_interference_size
-  using std::hardware_destructive_interference_size;
-#else
-  constexpr std::size_t hardware_destructive_interference_size = 64;
-#endif
+// gcc compiler says the std::hardware_destructive_interference_size can vary with different compiler options.
+// So we can't use it in a header.
+constexpr std::size_t hardware_destructive_interference_size = 64;
 
 
 /**
